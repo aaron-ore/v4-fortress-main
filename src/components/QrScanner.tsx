@@ -24,6 +24,7 @@ const QrScanner = forwardRef<QrScannerRef, QrScannerProps>(
     const isMounted = useRef(true);
     const isCameraStartedRef = useRef(false); // Tracks if html5QrCode.start() is active
     const isStartingRef = useRef(false); // Tracks if startScanner is currently running
+    const qrScannerDivRef = useRef<HTMLDivElement>(null); // NEW: Ref for the scanner div
 
     const html5QrcodeConstructorConfig: Html5QrcodeFullConfig = {
       formatsToSupport: [
@@ -103,6 +104,12 @@ const QrScanner = forwardRef<QrScannerRef, QrScannerProps>(
         onLoading(false);
         return;
       }
+      // NEW: Check if the div element is available
+      if (!qrScannerDivRef.current) {
+        console.log("[QrScanner] qrScannerDivRef.current is null. Deferring startScanner.");
+        return; // Defer starting until the div is mounted
+      }
+
 
       isStartingRef.current = true; // Mark as starting
       onLoading(true); // Indicate loading has started
@@ -207,7 +214,7 @@ const QrScanner = forwardRef<QrScannerRef, QrScannerProps>(
       } finally {
         isStartingRef.current = false; // Always reset starting flag
       }
-    }, [isOpen, onScan, onReady, onError, onLoading, stopScanner, html5QrcodeConstructorConfig, html5QrcodeCameraScanConfig]);
+    }, [isOpen, onScan, onReady, onError, onLoading, stopScanner, html5QrcodeConstructorConfig, html5QrcodeCameraScanConfig, qrScannerDivRef]); // Added qrScannerDivRef to dependencies
 
     const retryStart = useCallback(async () => {
       console.log("[QrScanner] retryStart called.");
@@ -223,9 +230,10 @@ const QrScanner = forwardRef<QrScannerRef, QrScannerProps>(
       isMounted.current = true;
       console.log("[QrScanner] Main effect running. isOpen:", isOpen);
 
-      if (isOpen) {
+      // NEW: Only attempt to start if the divRef is available
+      if (isOpen && qrScannerDivRef.current) {
         startScanner();
-      } else {
+      } else if (!isOpen) {
         stopAndClear();
       }
 
@@ -234,10 +242,10 @@ const QrScanner = forwardRef<QrScannerRef, QrScannerProps>(
         console.log("[QrScanner] Component unmounting or effect cleanup. Stopping and clearing scanner.");
         stopAndClear();
       };
-    }, [isOpen, startScanner, stopAndClear]);
+    }, [isOpen, startScanner, stopAndClear, qrScannerDivRef.current]); // Added qrScannerDivRef.current to dependencies
 
     return (
-      <div id={QR_SCANNER_DIV_ID} className="w-full h-full" />
+      <div id={QR_SCANNER_DIV_ID} ref={qrScannerDivRef} className="w-full h-full" /> {/* NEW: Attach ref here */}
     );
   }
 );
