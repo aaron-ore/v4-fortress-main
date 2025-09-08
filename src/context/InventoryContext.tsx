@@ -17,7 +17,7 @@ import { useOrders } from "./OrdersContext";
 import { useVendors } from "./VendorContext";
 import { processAutoReorder } from "@/utils/autoReorderLogic";
 import { useNotifications } from "./NotificationContext";
-import { parseAndValidateDate } from "@/utils/dateUtils"; // NEW: Import parseAndValidateDate
+import { parseAndValidateDate } from "@/utils/dateUtils";
 // REMOVED: import { mockInventoryItems } from "@/utils/mockData"; // Import mock data
 
 export interface InventoryItem {
@@ -72,7 +72,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
   const { addOrder } = useOrders();
   const { vendors } = useVendors();
   const { addNotification } = useNotifications();
-  const isInitialLoad = useRef(true);
+  // REMOVED: const isInitialLoad = useRef(true);
 
   const mapSupabaseItemToInventoryItem = (item: any): InventoryItem => {
     const pickingBinQuantity = parseInt(item.picking_bin_quantity || '0');
@@ -146,16 +146,24 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [profile?.organizationId]);
 
+  // Effect for initial data fetch
   useEffect(() => {
-    if (!isLoadingProfile) {
-      fetchInventoryItems().then((fetchedItems) => {
-        if (!isInitialLoad.current && profile?.organizationId) {
-          processAutoReorder(fetchedItems, addOrder, vendors, profile.organizationId, addNotification);
-        }
-        isInitialLoad.current = false;
-      });
+    if (!isLoadingProfile && profile?.organizationId) {
+      fetchInventoryItems();
+    } else if (!isLoadingProfile && !profile?.organizationId) {
+      setInventoryItems([]);
+      setIsLoadingInventory(false);
     }
-  }, [fetchInventoryItems, isLoadingProfile, profile?.organizationId, addOrder, vendors, addNotification]);
+  }, [fetchInventoryItems, isLoadingProfile, profile?.organizationId]);
+
+  // Effect to trigger auto-reorder logic when inventory or vendors change
+  useEffect(() => {
+    // Only run auto-reorder logic if inventory items are loaded and there's an organization
+    if (!isLoadingInventory && profile?.organizationId && inventoryItems.length > 0) {
+      console.log("[InventoryContext] Triggering auto-reorder check due to inventory/vendor/profile change.");
+      processAutoReorder(inventoryItems, addOrder, vendors, profile.organizationId, addNotification);
+    }
+  }, [inventoryItems, vendors, profile?.organizationId, isLoadingInventory, addOrder, addNotification]);
 
   const addInventoryItem = async (item: Omit<InventoryItem, "id" | "status" | "lastUpdated" | "organizationId" | "quantity">) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -203,9 +211,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       const newItem: InventoryItem = mapSupabaseItemToInventoryItem(data[0]);
       setInventoryItems((prevItems) => [...prevItems, newItem]);
       showSuccess(`Added new inventory item: ${newItem.name} (SKU: ${newItem.sku}).`);
-      if (profile?.organizationId) {
-        processAutoReorder([...inventoryItems, newItem], addOrder, vendors, profile.organizationId, addNotification);
-      }
+      // REMOVED: processAutoReorder([...inventoryItems, newItem], addOrder, vendors, profile.organizationId, addNotification);
     } else {
       const errorMessage = "Failed to add item: No data returned after insert.";
       console.error(errorMessage);
@@ -263,9 +269,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
         ),
       );
       showSuccess(`Updated inventory item: ${updatedItemFromDB.name} (SKU: ${updatedItemFromDB.sku}).`);
-      if (profile?.organizationId) {
-        processAutoReorder(inventoryItems.map(item => item.id === updatedItemFromDB.id ? updatedItemFromDB : item), addOrder, vendors, profile.organizationId, addNotification);
-      }
+      // REMOVED: processAutoReorder(inventoryItems.map(item => item.id === updatedItemFromDB.id ? updatedItemFromDB : item), addOrder, vendors, profile.organizationId, addNotification);
     } else {
       const errorMessage = "Update might not have been saved. Check database permissions.";
       console.error(errorMessage);
@@ -298,10 +302,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const refreshInventory = async () => {
-    const currentItems = await fetchInventoryItems(); // Fetch again to ensure latest data
-    if (profile?.organizationId) {
-      processAutoReorder(currentItems, addOrder, vendors, profile.organizationId, addNotification);
-    }
+    await fetchInventoryItems(); // Fetch again to ensure latest data
+    // The useEffect for auto-reorder will trigger automatically after fetchInventoryItems updates the state.
   };
 
   return (
