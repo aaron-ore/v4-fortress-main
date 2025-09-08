@@ -118,12 +118,12 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const fetchInventoryItems = useCallback(async (): Promise<InventoryItem[]> => {
-    setIsLoadingInventory(true); // NEW: Set loading true at start
+    setIsLoadingInventory(true); // Set loading true at start
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session || !profile?.organizationId) {
       setInventoryItems([]); // Ensure empty if no session/orgId
-      setIsLoadingInventory(false); // NEW: Set loading false
+      setIsLoadingInventory(false); // Set loading false
       return [];
     }
 
@@ -136,12 +136,12 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Error fetching inventory items:", error);
       setInventoryItems([]); // Empty on error
       showError("Failed to load inventory items.");
-      setIsLoadingInventory(false); // NEW: Set loading false
+      setIsLoadingInventory(false); // Set loading false
       return [];
     } else {
       const fetchedItems: InventoryItem[] = data.map(mapSupabaseItemToInventoryItem);
       setInventoryItems(fetchedItems);
-      setIsLoadingInventory(false); // NEW: Set loading false
+      setIsLoadingInventory(false); // Set loading false
       return fetchedItems;
     }
   }, [profile?.organizationId]);
@@ -155,6 +155,51 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       setIsLoadingInventory(false);
     }
   }, [fetchInventoryItems, isLoadingProfile, profile?.organizationId]);
+
+  // NEW: Realtime subscription for inventory items
+  useEffect(() => {
+    if (!profile?.organizationId) return;
+
+    console.log(`[InventoryContext] Subscribing to real-time changes for organization: ${profile.organizationId}`);
+
+    const channel = supabase
+      .channel(`inventory_items_org_${profile.organizationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'inventory_items',
+          filter: `organization_id=eq.${profile.organizationId}`,
+        },
+        (payload) => {
+          console.log('[InventoryContext] Realtime change received:', payload);
+          setInventoryItems(prevItems => {
+            const newItem = mapSupabaseItemToInventoryItem(payload.new || payload.old);
+            switch (payload.eventType) {
+              case 'INSERT':
+                // Add new item if not already present (to avoid duplicates if initial fetch is still processing)
+                if (!prevItems.some(item => item.id === newItem.id)) {
+                  return [...prevItems, newItem];
+                }
+                return prevItems;
+              case 'UPDATE':
+                return prevItems.map(item => item.id === newItem.id ? newItem : item);
+              case 'DELETE':
+                return prevItems.filter(item => item.id !== newItem.id);
+              default:
+                return prevItems;
+            }
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log(`[InventoryContext] Unsubscribing from real-time changes for organization: ${profile.organizationId}`);
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.organizationId]); // Re-subscribe if organizationId changes
 
   // Effect to trigger auto-reorder logic when inventory or vendors change
   useEffect(() => {
@@ -208,10 +253,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Error adding inventory item:", error);
       throw error;
     } else if (data && data.length > 0) {
-      const newItem: InventoryItem = mapSupabaseItemToInventoryItem(data[0]);
-      setInventoryItems((prevItems) => [...prevItems, newItem]);
-      showSuccess(`Added new inventory item: ${newItem.name} (SKU: ${newItem.sku}).`);
-      // REMOVED: processAutoReorder([...inventoryItems, newItem], addOrder, vendors, profile.organizationId, addNotification);
+      // Rely on real-time subscription to update state
+      showSuccess(`Added new inventory item: ${data[0].name} (SKU: ${data[0].sku}).`);
     } else {
       const errorMessage = "Failed to add item: No data returned after insert.";
       console.error(errorMessage);
@@ -262,14 +305,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Error updating inventory item:", error);
       throw error;
     } else if (data && data.length > 0) {
-      const updatedItemFromDB: InventoryItem = mapSupabaseItemToInventoryItem(data[0]);
-      setInventoryItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === updatedItemFromDB.id ? updatedItemFromDB : item,
-        ),
-      );
-      showSuccess(`Updated inventory item: ${updatedItemFromDB.name} (SKU: ${updatedItemFromDB.sku}).`);
-      // REMOVED: processAutoReorder(inventoryItems.map(item => item.id === updatedItemFromDB.id ? updatedItemFromDB : item), addOrder, vendors, profile.organizationId, addNotification);
+      // Rely on real-time subscription to update state
+      showSuccess(`Updated inventory item: ${data[0].name} (SKU: ${data[0].sku}).`);
     } else {
       const errorMessage = "Update might not have been saved. Check database permissions.";
       console.error(errorMessage);
@@ -296,7 +333,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Error deleting inventory item:", error);
       showError(`Failed to delete item: ${error.message}`);
     } else {
-      setInventoryItems((prevItems) => prevItems.filter(item => item.id !== itemId));
+      // Rely on real-time subscription to update state
       showSuccess("Item deleted successfully!");
     }
   };
