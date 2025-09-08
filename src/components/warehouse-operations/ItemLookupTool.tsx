@@ -36,7 +36,7 @@ const ItemLookupTool: React.FC<ItemLookupToolProps> = ({ onScanRequest, scannedD
     const generateAndSetQr = async () => {
       if (selectedItem?.barcodeUrl) { // selectedItem.barcodeUrl now stores raw data
         try {
-          const svg = await generateQrCodeSvg(selectedItem.barcodeUrl, 100);
+          const svg = await generateQrCodeSvg(selectedItem.barcodeUrl, 60); // Adjusted size to 60
           setQrCodeSvg(svg);
         } catch (error) {
           console.error("Error generating QR code for item lookup display:", error);

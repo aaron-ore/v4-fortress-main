@@ -25,7 +25,7 @@ import { processAutoReorder } from "@/utils/autoReorderLogic";
 import { useNavigate } from "react-router-dom";
 import { Package, Tag, Scale, DollarSign, ArrowUp, ArrowDown, Trash2, History, Repeat } from "lucide-react";
 import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"; // Import Badge
 import { generateQrCodeSvg } from "@/utils/qrCodeGenerator"; // Import QR code generator
 
 interface InventoryItemQuickViewDialogProps {
@@ -94,7 +94,7 @@ const InventoryItemQuickViewDialog: React.FC<InventoryItemQuickViewDialogProps> 
         const generateAndSetQr = async () => {
           if (currentItem.barcodeUrl) {
             try {
-              const svg = await generateQrCodeSvg(currentItem.barcodeUrl, 100);
+              const svg = await generateQrCodeSvg(currentItem.barcodeUrl, 60); // Adjusted size to 60
               setQrCodeSvg(svg);
             } catch (error) {
               console.error("Error generating QR code for quick view display:", error);

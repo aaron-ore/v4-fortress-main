@@ -178,7 +178,7 @@ const CreatePurchaseOrder: React.FC = () => {
     const generateQr = async () => {
       if (poNumber) {
         try {
-          const svg = await generateQrCodeSvg(poNumber, 80);
+          const svg = await generateQrCodeSvg(poNumber, 60); // Adjusted size to 60
           setPoQrCodeSvg(svg);
         } catch (error) {
           console.error("Error generating PO QR code:", error);
@@ -278,7 +278,7 @@ const CreatePurchaseOrder: React.FC = () => {
     const pdfProps = {
       poNumber,
       poDate,
-      supplierName: supplierName,
+      supplierName: supplier,
       supplierEmail: supplierEmail,
       supplierAddress: supplierAddress,
       supplierContact: supplierContact,

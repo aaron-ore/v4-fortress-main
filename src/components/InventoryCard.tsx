@@ -32,7 +32,7 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
     const generateAndSetQr = async () => {
       if (item.barcodeUrl) { // item.barcodeUrl now stores the raw data
         try {
-          const svg = await generateQrCodeSvg(item.barcodeUrl, 50); // Generate smaller QR for card
+          const svg = await generateQrCodeSvg(item.barcodeUrl, 40); // Adjusted size to 40
           setQrCodeSvg(svg);
         } catch (error) {
           console.error("Error generating QR code for card display:", error);

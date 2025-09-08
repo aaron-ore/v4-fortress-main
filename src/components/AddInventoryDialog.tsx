@@ -115,7 +115,7 @@ const AddInventoryDialog: React.FC<AddInventoryDialogProps> = ({
       setBarcodeValue(value);
       if (value) {
         try {
-          const svg = await generateQrCodeSvg(value, 100);
+          const svg = await generateQrCodeSvg(value, 60); // Adjusted size to 60
           setQrCodeSvgPreview(svg);
         } catch (error) {
           console.error("Error generating QR code preview:", error);
@@ -259,8 +259,8 @@ const AddInventoryDialog: React.FC<AddInventoryDialogProps> = ({
   };
 
   // NEW: Check if any location parts are missing (only relevant for detailed mode)
-  const areMainLocationPartsMissing = viewMode === "detailed" && (!mainLocationParts.area || !mainLocationParts.row || !mainLocationParts.bay || !mainLocationParts.level || !mainLocationParts.pos);
-  const arePickingBinLocationPartsMissing = viewMode === "detailed" && (!pickingBinLocationParts.area || !pickingBinLocationParts.row || !pickingBinLocationParts.bay || !pickingBinLocationParts.level || !pickingBinLocationParts.pos);
+  const areMainLocationPartsMissing = viewMode === "detailed" && (!mainLocationParts.area || !mainLocationParts.row || !mainLocationParts.bay || !mainLocationParts.pos);
+  const arePickingBinLocationPartsMissing = viewMode === "detailed" && (!pickingBinLocationParts.area || !pickingBinLocationParts.row || !pickingBinLocationParts.bay || !pickingBinLocationParts.pos);
 
   const isFormInvalid =
     !itemName.trim() ||

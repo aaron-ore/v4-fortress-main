@@ -147,7 +147,7 @@ const EditInventoryItem: React.FC = () => {
       const generateAndSetQr = async () => {
         if (item.barcodeUrl) {
           try {
-            const svg = await generateQrCodeSvg(item.barcodeUrl, 100);
+            const svg = await generateQrCodeSvg(item.barcodeUrl, 60); // Adjusted size to 60
             setQrCodeSvg(svg);
           } catch (error) {
             console.error("Error generating QR code for display:", error);
@@ -167,7 +167,7 @@ const EditInventoryItem: React.FC = () => {
     const generateAndSetQr = async () => {
       if (watchSku) {
         try {
-          const svg = await generateQrCodeSvg(watchSku, 100);
+          const svg = await generateQrCodeSvg(watchSku, 60); // Adjusted size to 60
           setQrCodeSvg(svg);
         } catch (error) {
           console.error("Error generating QR code preview:", error);

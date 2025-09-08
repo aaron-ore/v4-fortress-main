@@ -199,7 +199,7 @@ const CreateInvoice: React.FC = () => {
     const generateQr = async () => {
       if (invoiceNumber) {
         try {
-          const svg = await generateQrCodeSvg(invoiceNumber, 80);
+          const svg = await generateQrCodeSvg(invoiceNumber, 60); // Adjusted size to 60
           setInvoiceQrCodeSvg(svg);
         } catch (error) {
           console.error("Error generating Invoice QR code:", error);
