@@ -18,7 +18,6 @@ import { useVendors } from "./VendorContext";
 import { processAutoReorder } from "@/utils/autoReorderLogic";
 import { useNotifications } from "./NotificationContext";
 import { parseAndValidateDate } from "@/utils/dateUtils";
-// REMOVED: import { mockInventoryItems } from "@/utils/mockData"; // Import mock data
 
 export interface InventoryItem {
   id: string;
@@ -51,7 +50,7 @@ export interface InventoryItem {
 
 interface InventoryContextType {
   inventoryItems: InventoryItem[];
-  isLoadingInventory: boolean; // NEW: Add loading state
+  isLoadingInventory: boolean;
   addInventoryItem: (item: Omit<InventoryItem, "id" | "status" | "lastUpdated" | "organizationId" | "quantity">) => Promise<void>;
   updateInventoryItem: (updatedItem: Omit<InventoryItem, "quantity"> & { id: string }) => Promise<void>;
   deleteInventoryItem: (itemId: string) => Promise<void>;
@@ -62,17 +61,18 @@ const InventoryContext = createContext<InventoryContextType | undefined>(
   undefined,
 );
 
-// Changed initialInventoryItems to use mock data
 export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]); // Initialize as empty
-  const [isLoadingInventory, setIsLoadingInventory] = useState(true); // NEW: Add loading state
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [isLoadingInventory, setIsLoadingInventory] = useState(true);
   const { profile, isLoadingProfile } = useProfile();
   const { addOrder } = useOrders();
   const { vendors } = useVendors();
   const { addNotification } = useNotifications();
-  // REMOVED: const isInitialLoad = useRef(true);
+
+  // NEW: Ref to track if the initial load is complete
+  const isInitialLoadComplete = useRef(false);
 
   const mapSupabaseItemToInventoryItem = (item: any): InventoryItem => {
     const pickingBinQuantity = parseInt(item.picking_bin_quantity || '0');
@@ -85,9 +85,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
     const retailPrice = parseFloat(item.retail_price || '0');
     const autoReorderQuantity = parseInt(item.auto_reorder_quantity || '0');
 
-    // Ensure last_updated is always a valid ISO string
     const validatedLastUpdated = parseAndValidateDate(item.last_updated);
-    const lastUpdatedString = validatedLastUpdated ? validatedLastUpdated.toISOString() : new Date().toISOString(); // Fallback to current date if invalid
+    const lastUpdatedString = validatedLastUpdated ? validatedLastUpdated.toISOString() : new Date().toISOString();
 
     return {
       id: item.id,
@@ -97,7 +96,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       category: item.category || "",
       pickingBinQuantity: isNaN(pickingBinQuantity) ? 0 : pickingBinQuantity,
       overstockQuantity: isNaN(overstockQuantity) ? 0 : overstockQuantity,
-      quantity: (isNaN(pickingBinQuantity) ? 0 : pickingBinQuantity) + (isNaN(overstockQuantity) ? 0 : overstockQuantity), // Derived
+      quantity: (isNaN(pickingBinQuantity) ? 0 : pickingBinQuantity) + (isNaN(overstockQuantity) ? 0 : overstockQuantity),
       reorderLevel: isNaN(reorderLevel) ? 0 : reorderLevel,
       pickingReorderLevel: isNaN(pickingReorderLevel) ? 0 : pickingReorderLevel,
       committedStock: isNaN(committedStock) ? 0 : committedStock,
@@ -105,7 +104,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       unitCost: isNaN(unitCost) ? 0 : unitCost,
       retailPrice: isNaN(retailPrice) ? 0 : retailPrice,
       location: item.location || "",
-      pickingBinLocation: item.picking_bin_location || item.location || "", // Default to main location if not set
+      pickingBinLocation: item.picking_bin_location || item.location || "",
       status: item.status || "In Stock",
       lastUpdated: lastUpdatedString,
       imageUrl: item.image_url || undefined,
@@ -118,12 +117,16 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const fetchInventoryItems = useCallback(async (): Promise<InventoryItem[]> => {
-    setIsLoadingInventory(true); // Set loading true at start
+    // Only set loading to true if it's the initial load
+    if (!isInitialLoadComplete.current) {
+      setIsLoadingInventory(true);
+    }
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session || !profile?.organizationId) {
-      setInventoryItems([]); // Ensure empty if no session/orgId
-      setIsLoadingInventory(false); // Set loading false
+      setInventoryItems([]);
+      setIsLoadingInventory(false);
+      isInitialLoadComplete.current = true; // Mark initial load complete even if no data
       return [];
     }
 
@@ -134,14 +137,16 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
 
     if (error) {
       console.error("Error fetching inventory items:", error);
-      setInventoryItems([]); // Empty on error
+      setInventoryItems([]);
       showError("Failed to load inventory items.");
-      setIsLoadingInventory(false); // Set loading false
+      setIsLoadingInventory(false);
+      isInitialLoadComplete.current = true; // Mark initial load complete on error
       return [];
     } else {
       const fetchedItems: InventoryItem[] = data.map(mapSupabaseItemToInventoryItem);
       setInventoryItems(fetchedItems);
-      setIsLoadingInventory(false); // Set loading false
+      setIsLoadingInventory(false);
+      isInitialLoadComplete.current = true; // Mark initial load complete on success
       return fetchedItems;
     }
   }, [profile?.organizationId]);
@@ -153,10 +158,11 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
     } else if (!isLoadingProfile && !profile?.organizationId) {
       setInventoryItems([]);
       setIsLoadingInventory(false);
+      isInitialLoadComplete.current = true; // Ensure initial load is marked complete
     }
   }, [fetchInventoryItems, isLoadingProfile, profile?.organizationId]);
 
-  // NEW: Realtime subscription for inventory items
+  // Realtime subscription for inventory items
   useEffect(() => {
     if (!profile?.organizationId) return;
 
@@ -167,7 +173,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
+          event: '*',
           schema: 'public',
           table: 'inventory_items',
           filter: `organization_id=eq.${profile.organizationId}`,
@@ -178,7 +184,6 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
             const newItem = mapSupabaseItemToInventoryItem(payload.new || payload.old);
             switch (payload.eventType) {
               case 'INSERT':
-                // Add new item if not already present (to avoid duplicates if initial fetch is still processing)
                 if (!prevItems.some(item => item.id === newItem.id)) {
                   return [...prevItems, newItem];
                 }
@@ -199,16 +204,16 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.log(`[InventoryContext] Unsubscribing from real-time changes for organization: ${profile.organizationId}`);
       supabase.removeChannel(channel);
     };
-  }, [profile?.organizationId]); // Re-subscribe if organizationId changes
+  }, [profile?.organizationId]);
 
   // Effect to trigger auto-reorder logic when inventory or vendors change
   useEffect(() => {
-    // Only run auto-reorder logic if inventory items are loaded and there's an organization
-    if (!isLoadingInventory && profile?.organizationId && inventoryItems.length > 0) {
+    // Only run auto-reorder logic if initial load is complete, and there's an organization
+    if (isInitialLoadComplete.current && profile?.organizationId && inventoryItems.length > 0) {
       console.log("[InventoryContext] Triggering auto-reorder check due to inventory/vendor/profile change.");
       processAutoReorder(inventoryItems, addOrder, vendors, profile.organizationId, addNotification);
     }
-  }, [inventoryItems, vendors, profile?.organizationId, isLoadingInventory, addOrder, addNotification]);
+  }, [inventoryItems, vendors, profile?.organizationId, addOrder, addNotification]); // Removed isLoadingInventory from dependencies
 
   const addInventoryItem = async (item: Omit<InventoryItem, "id" | "status" | "lastUpdated" | "organizationId" | "quantity">) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -218,7 +223,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
 
     const totalQuantity = item.pickingBinQuantity + item.overstockQuantity;
     const status = totalQuantity > item.reorderLevel ? "In Stock" : (totalQuantity > 0 ? "Low Stock" : "Out of Stock");
-    const lastUpdated = new Date().toISOString(); // Use full ISO string
+    const lastUpdated = new Date().toISOString();
 
     const { data, error } = await supabase
       .from("inventory_items")
@@ -253,7 +258,6 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Error adding inventory item:", error);
       throw error;
     } else if (data && data.length > 0) {
-      // Rely on real-time subscription to update state
       showSuccess(`Added new inventory item: ${data[0].name} (SKU: ${data[0].sku}).`);
     } else {
       const errorMessage = "Failed to add item: No data returned after insert.";
@@ -270,7 +274,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
 
     const totalQuantity = updatedItem.pickingBinQuantity + updatedItem.overstockQuantity;
     const newStatus = totalQuantity > updatedItem.reorderLevel ? "In Stock" : (totalQuantity > 0 ? "Low Stock" : "Out of Stock");
-    const lastUpdated = new Date().toISOString(); // Use full ISO string
+    const lastUpdated = new Date().toISOString();
 
     const { data, error } = await supabase
       .from("inventory_items")
@@ -305,7 +309,6 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Error updating inventory item:", error);
       throw error;
     } else if (data && data.length > 0) {
-      // Rely on real-time subscription to update state
       showSuccess(`Updated inventory item: ${data[0].name} (SKU: ${data[0].sku}).`);
     } else {
       const errorMessage = "Update might not have been saved. Check database permissions.";
@@ -333,14 +336,12 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Error deleting inventory item:", error);
       showError(`Failed to delete item: ${error.message}`);
     } else {
-      // Rely on real-time subscription to update state
       showSuccess("Item deleted successfully!");
     }
   };
 
   const refreshInventory = async () => {
-    await fetchInventoryItems(); // Fetch again to ensure latest data
-    // The useEffect for auto-reorder will trigger automatically after fetchInventoryItems updates the state.
+    await fetchInventoryItems();
   };
 
   return (
