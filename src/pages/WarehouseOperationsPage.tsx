@@ -22,6 +22,7 @@ import ReturnsProcessingDialog from "@/components/warehouse-operations/dialogs/R
 import StockTransferDialog from "@/components/warehouse-operations/dialogs/StockTransferDialog";
 import CycleCountDialog from "@/components/warehouse-operations/dialogs/CycleCountDialog";
 import IssueReportDialog from "@/components/warehouse-operations/dialogs/IssueReportDialog";
+import PutawayDialog from "@/components/warehouse-operations/dialogs/PutawayDialog"; // NEW: Import PutawayDialog
 
 const WarehouseOperationsPage: React.FC = () => {
   const isMobile = useIsMobile();
@@ -46,6 +47,7 @@ const WarehouseOperationsPage: React.FC = () => {
   const [isStockTransferDialogOpen, setIsStockTransferDialogOpen] = useState(false);
   const [isCycleCountDialogOpen, setIsCycleCountDialogOpen] = useState(false);
   const [isIssueReportDialogOpen, setIsIssueReportDialogOpen] = useState(false);
+  const [isPutawayDialogOpen, setIsPutawayDialogOpen] = useState(false); // NEW: State for PutawayDialog
 
   // Map tool values to their dialog open/close states
   const dialogStates = {
@@ -60,12 +62,14 @@ const WarehouseOperationsPage: React.FC = () => {
     "stock-transfer": { isOpen: isStockTransferDialogOpen, setIsOpen: setIsStockTransferDialogOpen },
     "cycle-count": { isOpen: isCycleCountDialogOpen, setIsOpen: setIsCycleCountDialogOpen },
     "issue-report": { isOpen: isIssueReportDialogOpen, setIsOpen: setIsIssueReportDialogOpen },
+    "putaway": { isOpen: isPutawayDialogOpen, setIsOpen: setIsPutawayDialogOpen }, // NEW: Add PutawayDialog state
   };
 
   const operationButtons = [
     { value: "dashboard", label: "Dashboard", icon: LayoutDashboard, type: "tab" },
     { value: "item-lookup", label: "Lookup", icon: SearchIcon, type: "dialog" },
     { value: "receive-inventory", label: "Receive", icon: Package, type: "dialog" },
+    { value: "putaway", label: "Putaway", icon: MapPin, type: "dialog" }, // NEW: Putaway button
     { value: "fulfill-order", label: "Fulfill", icon: ShoppingCart, type: "dialog" },
     { value: "ship-order", label: "Ship", icon: Truck, type: "dialog" },
     { value: "picking-wave", label: "Pick Wave", icon: ListOrdered, type: "dialog" },
@@ -244,6 +248,13 @@ const WarehouseOperationsPage: React.FC = () => {
       <ReceiveInventoryDialog
         isOpen={isReceiveInventoryDialogOpen}
         onClose={() => closeDialogAndClearHash("receive-inventory")}
+        onScanRequest={requestScan}
+        scannedDataFromGlobal={scannedDataForTool}
+        onScannedDataProcessed={handleScannedDataProcessed}
+      />
+      <PutawayDialog // NEW: Render PutawayDialog
+        isOpen={isPutawayDialogOpen}
+        onClose={() => closeDialogAndClearHash("putaway")}
         onScanRequest={requestScan}
         scannedDataFromGlobal={scannedDataForTool}
         onScannedDataProcessed={handleScannedDataProcessed}

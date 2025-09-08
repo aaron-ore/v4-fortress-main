@@ -249,9 +249,14 @@ const ReceiveInventoryTool: React.FC<ReceiveInventoryToolProps> = ({ onScanReque
 
     if (updatesSuccessful) {
       // Update PO status (e.g., to 'Shipped' or 'Partially Received')
-      const updatedPO = { ...selectedPO, status: "Shipped" as OrderItem['status'], notes: selectedPO.notes }; // Explicitly cast status
+      const updatedPO = {
+        ...selectedPO,
+        status: "Shipped" as OrderItem['status'],
+        putawayStatus: "Pending", // NEW: Mark PO as pending putaway
+        notes: selectedPO.notes
+      }; // Explicitly cast status
       await updateOrder(updatedPO);
-      showSuccess(`Shipment for PO ${selectedPO.id} received successfully! Inventory updated.`);
+      showSuccess(`Shipment for PO ${selectedPO.id} received successfully! Inventory updated and ready for putaway.`);
       refreshInventory(); // Ensure inventory context is refreshed
       setPoNumberInput("");
       setSelectedPO(null);
@@ -342,7 +347,7 @@ const ReceiveInventoryTool: React.FC<ReceiveInventoryToolProps> = ({ onScanReque
                       </div>
                       <div className="flex items-center justify-between mt-2 flex-wrap gap-y-1">
                         <p className="text-muted-foreground text-sm flex items-center gap-1 flex-grow min-w-0 truncate">
-                          <MapPin className="h-4 w-4 flex-shrink-0" /> Putaway: <span className="font-semibold text-primary flex-shrink-0">{locations.find(loc => loc.fullLocationString === item.suggestedPutawayLocation)?.displayName || item.suggestedPutawayLocation}</span>
+                          <MapPin className="h-4 w-4 flex-shrink-0" /> Putaway: <span className="font-semibold text-primary flex-shrink-0">{structuredLocations.find(loc => loc.fullLocationString === item.suggestedPutawayLocation)?.displayName || item.suggestedPutawayLocation}</span>
                         </p>
                         {item.receivedQuantity > 0 && (
                           <Button variant="outline" size="sm" onClick={() => handlePrintPutawayLabel(item)} className="flex-shrink-0">

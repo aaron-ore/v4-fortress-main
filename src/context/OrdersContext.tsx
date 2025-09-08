@@ -32,6 +32,7 @@ export interface OrderItem {
   items: POItem[];
   organizationId: string | null;
   terms?: string;
+  putawayStatus?: "Pending" | "Completed"; // NEW: Add putawayStatus for Purchase Orders
 }
 
 interface OrdersContextType {
@@ -86,6 +87,7 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({
       items: items,
       organizationId: order.organization_id,
       terms: order.terms || undefined,
+      putawayStatus: order.putaway_status || undefined, // NEW: Map putaway_status
     };
   };
 
@@ -140,6 +142,7 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({
         delivery_route: updatedOrder.deliveryRoute,
         items: updatedOrder.items,
         terms: updatedOrder.terms,
+        putaway_status: updatedOrder.putawayStatus, // NEW: Update putaway_status
       })
       .eq("id", updatedOrder.id)
       .eq("organization_id", profile.organizationId)
@@ -187,6 +190,7 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({
         terms: newOrder.terms,
         user_id: session.user.id,
         organization_id: profile.organizationId,
+        putaway_status: newOrder.type === "Purchase" ? "Pending" : undefined, // NEW: Set putawayStatus for new Purchase Orders
       })
       .select();
 
