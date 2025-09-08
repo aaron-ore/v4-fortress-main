@@ -29,6 +29,7 @@ import {
   Menu,
   UserRound,
   Plug,
+  Zap, // NEW: Import Zap icon for Automation
   // Layout, // REMOVED: Import Layout icon for Floor Plan
 } from "lucide-react";
 import React from "react";
@@ -54,6 +55,7 @@ export const mainNavItems: NavItem[] = [
   { title: "Locations", href: "/locations", icon: MapPin },
   // { title: "Floor Plan", href: "/floor-plan", icon: Layout }, // REMOVED: Add Floor Plan NavItem
   { title: "Integrations", href: "/integrations", icon: Plug },
+  { title: "Automation", href: "/automation", icon: Zap, adminOnly: true }, // NEW: Automation NavItem
   {
     title: "Warehouse Operations",
     href: "/warehouse-operations",

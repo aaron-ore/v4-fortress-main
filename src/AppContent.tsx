@@ -65,6 +65,8 @@ import { NotificationProvider } from "./context/NotificationContext";
 import { StockMovementProvider } from "./context/StockMovementContext";
 import { ReplenishmentProvider } from "./context/ReplenishmentContext";
 import { InventoryProvider } from "./context/InventoryContext";
+import { AutomationProvider } from "./context/AutomationContext"; // NEW: Import AutomationProvider
+import Automation from "./pages/Automation"; // NEW: Import Automation page
 
 
 // Moved AuthenticatedApp definition here
@@ -81,6 +83,7 @@ const AuthenticatedApp = () => {
                 <StockMovementProvider>
                   <ReplenishmentProvider>
                     <InventoryProvider>
+                      <AutomationProvider> {/* NEW: Wrap with AutomationProvider */}
                         <Routes>
                           <Route path="/" element={<Layout />}>
                             <Route index element={<Dashboard />} />
@@ -105,10 +108,12 @@ const AuthenticatedApp = () => {
                             <Route path="warehouse-operations" element={<WarehouseOperationsPage />} />
                             <Route path="locations" element={<Locations />} />
                             <Route path="integrations" element={<Integrations />} />
+                            <Route path="automation" element={<Automation />} /> {/* NEW: Add Automation route */}
                             <Route path="*" element={<NotFound />} />
                           </Route>
                         </Routes>
                       {isOnboardingComplete ? null : <OnboardingWizard />}
+                      </AutomationProvider> {/* NEW: Close AutomationProvider */}
                     </InventoryProvider>
                   </ReplenishmentProvider>
                 </StockMovementProvider>
