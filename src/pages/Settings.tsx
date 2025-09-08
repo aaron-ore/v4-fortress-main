@@ -10,14 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProfile } from "@/context/ProfileContext";
 import { showError, showSuccess } from "@/utils/toast";
-import { Loader2, Palette, Settings as SettingsIcon, Image as ImageIcon, X } from "lucide-react"; // NEW: Import X icon
+import { Loader2, Palette, Settings as SettingsIcon, Image as ImageIcon, X } from "lucide-react";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { Link } from "react-router-dom";
-import { uploadFileToSupabase } from "@/integrations/supabase/storage"; // NEW: Import uploadFileToSupabase
+import { uploadFileToSupabase } from "@/integrations/supabase/storage";
 
 const Settings: React.FC = () => {
   const { theme, setTheme } = useTheme(); // Current active theme from next-themes
-  const { profile, updateProfile, isLoadingProfile, fetchProfile, updateOrganizationTheme } = useProfile(); // NEW: Get updateOrganizationTheme
+  const { profile, updateProfile, isLoadingProfile, fetchProfile, updateOrganizationTheme } = useProfile();
   const { companyProfile, setCompanyProfile, locations, addLocation, removeLocation } = useOnboarding();
 
   const [companyName, setCompanyName] = useState(profile?.companyName || ""); // Derived from profile
@@ -29,6 +29,10 @@ const Settings: React.FC = () => {
   const [organizationCodeInput, setOrganizationCodeInput] = useState(profile?.organizationCode || "");
   const [isSavingOrganizationCode, setIsSavingOrganizationCode] = useState(false);
 
+  // NEW: State for theme selection
+  const [selectedTheme, setSelectedTheme] = useState(profile?.organizationTheme || "dark");
+  const [isSavingTheme, setIsSavingTheme] = useState(false);
+
   useEffect(() => {
     if (profile) {
       setCompanyName(profile.companyName || "");
@@ -36,6 +40,8 @@ const Settings: React.FC = () => {
       setCompanyCurrency(profile.companyCurrency || "USD");
       setCompanyLogoUrlPreview(profile.companyLogoUrl || "");
       setOrganizationCodeInput(profile.organizationCode || "");
+      // NEW: Update selectedTheme when profile.organizationTheme changes
+      setSelectedTheme(profile.organizationTheme || "dark");
     }
   }, [profile]);
 
@@ -52,15 +58,15 @@ const Settings: React.FC = () => {
       } else {
         showError("Please select an image file (PNG, JPG, GIF, SVG).");
         setCompanyLogoFile(null);
-        setCompanyLogoUrlPreview(profile?.companyLogoUrl || ""); // Revert to profile's logo
+        setCompanyLogoUrlPreview(profile?.companyLogoUrl || "");
       }
     } else {
       setCompanyLogoFile(null);
-      setCompanyLogoUrlPreview(profile?.companyLogoUrl || ""); // Revert to profile's logo
+      setCompanyLogoUrlPreview(profile?.companyLogoUrl || "");
     }
   };
 
-  const handleClearLogo = () => { // NEW: Handler to clear the logo
+  const handleClearLogo = () => {
     setCompanyLogoFile(null);
     setCompanyLogoUrlPreview("");
     showSuccess("Logo cleared. Save changes to apply.");
@@ -86,19 +92,16 @@ const Settings: React.FC = () => {
         return;
       }
     } else if (companyLogoUrlPreview === "") {
-      // If preview is empty and no new file, it means user cleared the logo
       finalCompanyLogoUrl = undefined;
     }
 
     try {
-      // Pass the current organizationCodeInput when saving company profile
       await setCompanyProfile({
         name: companyName,
         address: companyAddress,
         currency: companyCurrency,
         companyLogoUrl: finalCompanyLogoUrl,
-      }, organizationCodeInput); // Pass current organizationCodeInput
-      // showSuccess("Company profile updated successfully!"); // Moved to OnboardingContext
+      }, organizationCodeInput);
     } catch (error: any) {
       showError(`Failed to update company profile: ${error.message}`);
     } finally {
@@ -122,18 +125,37 @@ const Settings: React.FC = () => {
 
     setIsSavingOrganizationCode(true);
     try {
-      // Call setCompanyProfile with current company profile data and the new unique code
       await setCompanyProfile({
         name: companyName,
         address: companyAddress,
         currency: companyCurrency,
-        companyLogoUrl: companyLogoUrlPreview || undefined, // Pass current logo URL
+        companyLogoUrl: companyLogoUrlPreview || undefined,
       }, organizationCodeInput.trim());
-      // showSuccess("Organization Code updated successfully!"); // Moved to OnboardingContext
     } catch (error: any) {
       showError(`Failed to update Organization Code: ${error.message}`);
     } finally {
       setIsSavingOrganizationCode(false);
+    }
+  };
+
+  // NEW: Handle saving theme
+  const handleSaveTheme = async () => {
+    if (!profile?.organizationId) {
+      showError("Organization not found. Please set up your company profile first.");
+      return;
+    }
+    if (selectedTheme === (profile?.organizationTheme || "dark")) {
+      showSuccess("No changes to save for Theme.");
+      return;
+    }
+    setIsSavingTheme(true);
+    try {
+      await updateOrganizationTheme(selectedTheme);
+      setTheme(selectedTheme); // Immediately apply theme to UI
+    } catch (error: any) {
+      showError(`Failed to update theme: ${error.message}`);
+    } finally {
+      setIsSavingTheme(false);
     }
   };
 
@@ -145,6 +167,9 @@ const Settings: React.FC = () => {
     companyLogoFile !== null;
 
   const hasOrganizationCodeChanges = organizationCodeInput !== (profile?.organizationCode || "");
+  const hasThemeChanges = selectedTheme !== (profile?.organizationTheme || "dark");
+
+  const availableThemes = ['dark', 'ocean-breeze', 'sunset-glow', 'forest-whisper', 'emerald', 'deep-forest', 'natural-light'];
 
   return (
     <div className="flex flex-col space-y-6 p-6">
@@ -188,7 +213,6 @@ const Settings: React.FC = () => {
               onChange={(e) => setCompanyAddress(e.target.value)}
             />
           </div>
-          {/* Company Logo File Input and Preview */}
           <div className="space-y-2">
             <Label htmlFor="companyLogoFile">Company Logo (Optional)</Label>
             <Input
@@ -222,7 +246,42 @@ const Settings: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* NEW: Organization Code Settings */}
+      {/* NEW: Theme Settings - only for admins */}
+      {profile?.role === 'admin' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-6 w-6 text-primary" /> Organization Theme
+            </CardTitle>
+            <CardDescription>
+              Select a theme for your entire organization. This will apply to all users.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RadioGroup value={selectedTheme} onValueChange={setSelectedTheme} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {availableThemes.map(t => (
+                <div key={t} className="flex items-center space-x-2">
+                  <RadioGroupItem value={t} id={`theme-${t}`} />
+                  <Label htmlFor={`theme-${t}`} className="capitalize">
+                    {t.replace(/-/g, ' ')}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+            <Button onClick={handleSaveTheme} disabled={isSavingTheme || !hasThemeChanges}>
+              {isSavingTheme ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Theme...
+                </>
+              ) : (
+                "Save Theme"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Organization Code Settings */}
       {profile?.role === 'admin' && profile?.organizationId && (
         <Card>
           <CardHeader>
