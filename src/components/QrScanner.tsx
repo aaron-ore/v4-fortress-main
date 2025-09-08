@@ -245,7 +245,7 @@ const QrScanner = forwardRef<QrScannerRef, QrScannerProps>(
     }, [isOpen, startScanner, stopAndClear, qrScannerDivRef.current]); // Added qrScannerDivRef.current to dependencies
 
     return (
-      <div id={QR_SCANNER_DIV_ID} ref={qrScannerDivRef} className="w-full h-full" /> {/* NEW: Attach ref here */}
+      <div id={QR_SCANNER_DIV_ID} ref={qrScannerDivRef} className="w-full h-full" /> 
     );
   }
 );
