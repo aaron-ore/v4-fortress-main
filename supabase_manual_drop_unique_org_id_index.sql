@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.profiles_organization_id_key;

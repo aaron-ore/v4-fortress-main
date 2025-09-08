@@ -1,0 +1,458 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Default Dark Theme Variables - applied to :root, which is usually html */
+  :root {
+    --background: 220 10% 8%; /* Very dark blue/black */
+    --foreground: 0 0% 100%; /* White */
+
+    --card: 220 10% 12%; /* Slightly lighter dark grey */
+    --card-foreground: 0 0% 100%; /* White */
+
+    --popover: 220 10% 12%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 250 80% 60%; /* Vibrant purple/blue accent */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 220 5% 20%; /* Lighter grey for secondary elements */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 5% 30%; /* Slightly lighter grey for muted text */
+    --muted-foreground: 220 5% 50%; /* Darker grey for muted text */
+
+    --accent: 250 80% 75%; /* Lighter shade of primary for accent */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 80% 60%; /* Red for negative changes */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 5% 35%; /* Adjusted for better contrast in dark themes */
+    --input: 220 10% 12%; /* Similar to card background */
+    --ring: 250 80% 60%; /* Primary accent color */
+
+    /* Sidebar specific colors - now matching main theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: 0 0% 100%; /* Explicitly white for dark themes */
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 220 5% 40%; /* Lighter scrollbar for dark themes */
+
+    --radius: 0.75rem; /* Increased default radius for more rounded corners */
+
+    --shadow-color: transparent; /* Default to transparent for dark themes */
+  }
+
+  /* Explicitly apply dark theme variables when html has 'dark' class */
+  html.dark {
+    --background: 220 10% 8%;
+    --foreground: 0 0% 100%;
+    --card: 220 10% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 220 10% 12%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 250 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 5% 20%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 5% 30%;
+    --muted-foreground: 220 5% 50%;
+    --accent: 250 80% 75%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 80% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 5% 35%; /* Adjusted for better contrast in dark themes */
+    --input: 220 10% 12%;
+    --ring: 250 80% 60%;
+
+    /* Sidebar specific colors for dark theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: 0 0% 100%; /* Explicitly white for dark themes */
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 220 5% 40%; /* Lighter scrollbar for dark themes */
+
+    --shadow-color: transparent; /* Ensure transparent for dark themes */
+  }
+
+  /* Ocean Breeze Palette */
+  html.ocean-breeze {
+    --background: 0 0% 98%; /* Very light grey */
+    --foreground: 220 10% 8%; /* Dark text */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --primary: 232 96% 87%; /* Light Sky Blue (#BFC8FC) */
+    --primary-foreground: 220 10% 8%; /* Dark text for primary buttons */
+
+    --secondary: 268 39% 84%; /* Lavender (#D9C7E6) */
+    --secondary-foreground: 220 10% 8%;
+
+    --muted: 210 20% 90%; /* Light grey */
+    --muted-foreground: 220 5% 50%;
+
+    --accent: 148 50% 79%; /* Soft Mint (#C7EDD8) */
+    --accent-foreground: 220 10% 8%;
+
+    --destructive: 0 80% 40%; /* Standard red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 45%; /* Adjusted for better contrast in light themes */
+    --input: 210 20% 92%; /* Slightly darker input background for light themes */
+    --ring: 232 96% 87%; /* Primary color */
+
+    /* Sidebar specific colors for light theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: var(--primary-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 210 20% 80%; /* Lighter scrollbar for light themes */
+
+    --shadow-color: hsl(0 0% 0% / 0.08); /* NEW: Shadow color for glow */
+  }
+
+  /* Sunset Glow Palette */
+  html.sunset-glow {
+    --background: 60 100% 99%; /* Cream Yellow (#FFFACD) */
+    --foreground: 220 10% 8%; /* Dark text */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --primary: 0 69% 72%; /* Coral Pink (#F08080) */
+    --primary-foreground: 0 0% 100%; /* White text for primary buttons */
+
+    --secondary: 30 100% 86%; /* Light Peach (#FFDAB9) */
+    --secondary-foreground: 220 10% 8%;
+
+    --muted: 210 20% 90%;
+    --muted-foreground: 220 5% 50%;
+
+    --accent: 30 100% 86%; /* Light Peach */
+    --accent-foreground: 220 10% 8%;
+
+    --destructive: 0 80% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 45%; /* Adjusted for better contrast in light themes */
+    --input: 210 20% 92%; /* Slightly darker input background for light themes */
+    --ring: 0 69% 72%; /* Primary color */
+
+    /* Sidebar specific colors for light theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: var(--primary-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 210 20% 80%; /* Lighter scrollbar for light themes */
+
+    --shadow-color: hsl(0 0% 0% / 0.08); /* NEW: Shadow color for glow */
+  }
+
+  /* Forest Whisper Palette */
+  html.forest-whisper {
+    --background: 0 0% 96%; /* Off White (#F5F5F5) */
+    --foreground: 220 10% 8%; /* Dark text */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --primary: 168 48% 85%; /* Teal (#C7EAE4) */
+    --primary-foreground: 220 10% 8%; /* Dark text for primary buttons */
+
+    --secondary: 258 39% 85%; /* Muted Lipac (#D0C7EA) */
+    --secondary-foreground: 220 10% 8%;
+
+    --muted: 210 20% 90%;
+    --muted-foreground: 220 5% 50%;
+
+    --accent: 258 39% 85%; /* Muted Lipac */
+    --accent-foreground: 220 10% 8%;
+
+    --destructive: 0 80% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 45%; /* Adjusted for better contrast in light themes */
+    --input: 210 20% 92%; /* Slightly darker input background for light themes */
+    --ring: 168 48% 85%; /* Primary color */
+
+    /* Sidebar specific colors for light theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: var(--primary-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 210 20% 80%; /* Lighter scrollbar for light themes */
+
+    --shadow-color: hsl(0 0% 0% / 0.08); /* NEW: Shadow color for glow */
+  }
+
+  /* NEW: Emerald Theme Palette */
+  html.emerald {
+    --background: 160 20% 15%; /* Dark Emerald Green */
+    --foreground: 0 0% 100%; /* White */
+
+    --card: 160 20% 20%; /* Slightly lighter emerald */
+    --card-foreground: 0 0% 100%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --popover: 160 20% 20%;
+    --popover-foreground: 0 0% 100%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --primary: 160 60% 70%; /* Bright Emerald Green */
+    --primary-foreground: 0 0% 100%; /* Changed from 220 10% 8% to White */
+
+    --secondary: 160 15% 30%; /* Muted green */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 160 10% 40%; /* Darker muted green */
+    --muted-foreground: 160 10% 60%;
+
+    --accent: 160 60% 80%; /* Lighter bright emerald */
+    --accent-foreground: 0 0% 100%; /* Changed from 220 10% 8% to White */
+
+    --destructive: 0 80% 60%; /* Red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 160 15% 40%; /* Adjusted for better contrast in emerald theme */
+    --input: 160 20% 20%; /* Similar to card background */
+    --ring: 160 60% 70%; /* Primary color */
+
+    /* Sidebar specific colors for Emerald theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: 0 0% 100%; /* Explicitly white for dark themes */
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 160 15% 40%; /* Lighter scrollbar for emerald theme */
+
+    --shadow-color: hsl(0 0% 0% / 0.08); /* NEW: Shadow color for glow */
+  }
+
+  /* NEW: Deep Forest Theme Palette */
+  html.deep-forest {
+    --background: 240 9% 11%; /* Almost black */
+    --foreground: 0 0% 100%; /* White */
+
+    --card: 180 25% 16%; /* Very dark green-blue */
+    --card-foreground: 0 0% 100%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --popover: 180 25% 16%;
+    --popover-foreground: 0 0% 100%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --primary: 168 43% 27%; /* Dark teal */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 6% 37%; /* Muted purple-grey */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 5% 25%; /* Darker grey for muted elements */
+    --muted-foreground: 240 5% 50%;
+
+    --accent: 270 29% 35%; /* Dark purple */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 80% 60%; /* Standard red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 5% 35%; /* Adjusted for better contrast in dark themes */
+    --input: 180 25% 16%; /* Same as card */
+    --ring: 168 43% 27%; /* Primary color */
+
+    /* Sidebar specific colors for Deep Forest theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: 0 0% 100%; /* Explicitly white for dark themes */
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 240 5% 40%; /* Lighter scrollbar for deep-forest theme */
+
+    --shadow-color: hsl(0 0% 0% / 0.08); /* NEW: Shadow color for glow */
+  }
+
+  /* NEW: Natural Light Theme Palette */
+  html.natural-light {
+    --background: 40 10% 96%; /* F5F5F4 - Off-white */
+    --foreground: 220 10% 8%; /* Dark text */
+
+    --card: 40 29% 84%; /* E1DBCB - Very light beige */
+    --card-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --popover: 40 29% 84%;
+    --popover-foreground: 220 10% 8%;
+    box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08); /* NEW: Subtle glow effect */
+
+    --primary: 80 10% 70%; /* B6BAAB - Sage green */
+    --primary-foreground: 0 0% 100%; /* White text for primary buttons */
+
+    --secondary: 40 19% 70%; /* C5B99F - Medium-light beige */
+    --secondary-foreground: 220 10% 8%;
+
+    --muted: 75 8% 88%; /* E1E2DD - Light grey-green */
+    --muted-foreground: 220 5% 50%;
+
+    --accent: 40 19% 70%; /* C5B99F - Same as secondary for cohesion */
+    --accent-foreground: 220 10% 8%;
+
+    --destructive: 0 80% 40%; /* Standard red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 10% 60%; /* Adjusted for better visibility: darker beige/brown */
+    --input: 75 8% 90%; /* Slightly lighter E1E2DD for input fields */
+    --ring: 80 10% 70%; /* Primary color */
+
+    /* Sidebar specific colors for Natural Light theme */
+    --sidebar-background: var(--background);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-active-background: var(--secondary);
+    --sidebar-active-foreground: var(--foreground); /* Dark text on active background */
+    --sidebar-border: var(--border);
+    --sidebar-toggle-background: var(--secondary);
+
+    --scrollbar-background: 75 8% 75%; /* Darker than muted for contrast */
+
+    --shadow-color: hsl(0 0% 0% / 0.08); /* NEW: Shadow color for glow */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground; /* Apply theme colors to body */
+  }
+
+  html, body, #root {
+    height: 100%; /* Ensure html, body, and root div take full height */
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Styles for PDF preview within the dialog */
+.dialog-print-area-wrapper .dialog-content-inner.pdf-preview-scaled {
+  transform: scale(0.7); /* Adjust scale as needed to fit the dialog */
+  transform-origin: top center;
+  margin: 20px auto; /* Add some margin around the scaled content */
+  box-shadow: 0 0 10px rgba(0,0,0,0.1); /* Add a subtle shadow for preview */
+  background-color: white; /* Ensure white background for preview */
+  color: black; /* Ensure text is black for preview */
+}
+
+/* Hide print-only content by default */
+.print-only-content {
+  display: none;
+}
+
+/* Print-specific styles */
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important; /* Allow content to dictate height */
+    overflow: visible !important; /* Allow content to overflow if needed for pagination */
+  }
+
+  /* Default @page rule for standard reports (8.5x11 or A4) */
+  @page {
+    margin: 10mm; /* Default margin for reports */
+  }
+
+  /* Named @page rule for labels */
+  @page label-page {
+    size: 101.6mm 50.8mm; /* 4x2 inches */
+    margin: 0 !important; /* Force browser to use 0 margins for labels */
+  }
+
+  /* Apply label-page to the root element when printing labels */
+  html.print-mode-label {
+    page: label-page;
+  }
+
+  /* Hide the main application layout */
+  .app-main-layout {
+    display: none !important;
+  }
+
+  /* Hide sonner toasts during print */
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  /* Make the print-only content visible and correctly positioned */
+  .print-only-content {
+    display: block !important;
+    position: static !important; /* Allow it to flow normally in print */
+    width: 100% !important; /* Take full width of the print page */
+    height: auto !important; /* Height determined by content */
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: auto !important; /* Reset z-index */
+    background-color: white !important;
+    color: black !important;
+    overflow: visible !important;
+  }
+
+  /* The .print-location-label class is for styling the content, not the page itself. */
+  /* The page size is now controlled by html.print-mode-label and @page label-page */
+  .print-location-label {
+    display: block !important;
+    width: 101.6mm !important; /* Exact label width */
+    height: 50.8mm !important; /* Exact label height */
+    margin: 0 !important; /* No margins around the label */
+    padding: 0 !important; /* No internal padding */
+    box-shadow: none !important;
+    border: none !important;
+    background-color: white !important;
+    color: black !important;
+    transform: none !important; /* Remove any scaling */
+    box-sizing: border-box !important;
+    page-break-after: always; /* Ensure each label prints on a new 'page' */
+  }
+
+  /* Ensure text color is black for printing */
+  .print-only-content * {
+    color: black !important;
+  }
+}

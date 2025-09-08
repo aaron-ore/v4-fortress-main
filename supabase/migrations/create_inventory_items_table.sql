@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS public.inventory_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  sku TEXT UNIQUE NOT NULL,
+  category TEXT NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  reorder_level INTEGER NOT NULL DEFAULT 0,
+  committed_stock INTEGER NOT NULL DEFAULT 0,
+  incoming_stock INTEGER NOT NULL DEFAULT 0,
+  unit_cost NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+  retail_price NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+  location TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'In Stock',
+  last_updated DATE NOT NULL DEFAULT CURRENT_DATE,
+  image_url TEXT,
+  vendor_id UUID REFERENCES public.vendors(id) ON DELETE SET NULL,
+  barcode_url TEXT,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
