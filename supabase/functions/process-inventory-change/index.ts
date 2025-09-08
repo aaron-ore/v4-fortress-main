@@ -1,5 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
-import { corsHeaders } from '../_shared/cors.ts';
+// Inlined corsHeaders to avoid module resolution issues
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 Deno.serve(async (req) => {
   // Handle CORS preflight request
@@ -92,7 +96,7 @@ Deno.serve(async (req) => {
       } else {
         // If no conditions are defined, it's always met
         conditionMet = true;
-        console(`Edge Function: Rule ${rule.name} - No conditions defined, condition met by default.`);
+        console.log(`Edge Function: Rule ${rule.name} - No conditions defined, condition met by default.`);
       }
 
       if (!conditionMet) {
