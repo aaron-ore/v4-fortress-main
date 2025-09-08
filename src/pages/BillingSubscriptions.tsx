@@ -71,7 +71,7 @@ const plans: SubscriptionPlan[] = [
       { text: "Up to 250 Inventory Items", included: true },
       { text: "Up to 3 Users", included: true },
       { text: "Basic Reporting", included: true },
-      { text: "Advanced Reporting", included: false },
+      { text: "Advanced Reporting", included: false }, // Limited advanced reporting
       { text: "Kanban Board", included: true },
       { text: "PDF Export (PO/Invoice)", included: true },
       { text: "CSV Import/Export", included: true },
@@ -88,12 +88,11 @@ const plans: SubscriptionPlan[] = [
     id: "pro",
     name: "Pro",
     description: "Unlock full power for comprehensive inventory management.",
-    monthlyPrice: 49,
+    monthlyPrice: 99, // Increased price
     features: [
       { text: "Up to 1,000 Inventory Items", included: true },
-      { text: "Unlimited Users", included: true },
-      { text: "Basic Reporting", included: true },
-      { text: "Advanced Reporting", included: true },
+      { text: "Up to 10 Users", included: true },
+      { text: "Basic & Advanced Reporting", included: true },
       { text: "Kanban Board", included: true },
       { text: "PDF Export (PO/Invoice)", included: true },
       { text: "CSV Import/Export", included: true },
@@ -108,6 +107,27 @@ const plans: SubscriptionPlan[] = [
     isPopular: true,
   },
   {
+    id: "premium", // NEW: Premium Plan
+    name: "Premium",
+    description: "Advanced features for growing enterprises.",
+    monthlyPrice: 349, // New price point
+    features: [
+      { text: "Up to 5,000 Inventory Items", included: true },
+      { text: "Unlimited Users", included: true },
+      { text: "All Reporting Features", included: true },
+      { text: "Kanban Board", included: true },
+      { text: "PDF Export (PO/Invoice)", included: true },
+      { text: "CSV Import/Export", included: true },
+      { text: "Bulk Update", included: true },
+      { text: "Auto-Reorder Settings", included: true },
+      { text: "Global Search", included: true },
+      { text: "Notifications", included: true },
+      { text: "Priority Support", included: true },
+      { text: "Dedicated Account Manager", included: true },
+      { text: "Custom Integrations", included: false },
+    ],
+  },
+  {
     id: "enterprise",
     name: "Enterprise",
     description: "Tailored solutions for large-scale operations.",
@@ -115,8 +135,7 @@ const plans: SubscriptionPlan[] = [
     features: [
       { text: "Unlimited Inventory Items", included: true },
       { text: "Unlimited Users", included: true },
-      { text: "Basic Reporting", included: true },
-      { text: "Advanced Reporting", included: true },
+      { text: "All Reporting Features", included: true },
       { text: "Kanban Board", included: true },
       { text: "PDF Export (PO/Invoice)", included: true },
       { text: "CSV Import/Export", included: true },
