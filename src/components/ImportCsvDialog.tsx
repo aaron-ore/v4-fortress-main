@@ -154,8 +154,15 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Edge Function failed with status: ${response.status}`);
+        let errorDetail = `Edge Function failed with status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.error || errorDetail;
+        } catch (jsonError) {
+          console.error("Failed to parse error response JSON:", jsonError);
+          errorDetail = `Edge Function failed with status: ${response.status}. Response was not valid JSON.`;
+        }
+        throw new Error(errorDetail);
       }
 
       const result = await response.json();
@@ -170,7 +177,9 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
 
     } catch (error: any) {
       console.error("Error during bulk import process:", error);
-      showError(`Bulk import failed: ${error.message}`);
+      // Ensure a string message is always displayed
+      const errorMessage = typeof error === 'string' ? error : (error.message || "An unknown error occurred during bulk import.");
+      showError(`Bulk import failed: ${errorMessage}`);
     } finally {
       setIsUploading(false);
       setSelectedFile(null);
