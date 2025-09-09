@@ -13,9 +13,15 @@ export interface AutomationRule {
   name: string;
   description?: string;
   isActive: boolean;
-  triggerType: string; // e.g., 'ON_STOCK_LEVEL_CHANGE'
-  conditionJson: any; // JSON object for conditions
-  actionJson: any; // JSON object for actions
+  triggerType: 
+    | 'ON_STOCK_LEVEL_CHANGE'
+    | 'ON_ORDER_STATUS_CHANGE'
+    | 'ON_NEW_INVENTORY_ITEM'
+    | 'ON_NEW_CUSTOMER_OR_VENDOR'
+    | 'ON_REPLENISHMENT_TASK_STATUS_CHANGE'
+    | 'ON_DISCREPANCY_REPORTED'; // Expanded trigger types
+  conditionJson: any; // JSON object for conditions (more flexible structure)
+  actionJson: any; // JSON object for actions (more flexible structure)
   createdAt: string;
 }
 

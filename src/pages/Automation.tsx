@@ -67,10 +67,14 @@ const Automation: React.FC = () => {
         return "On Stock Level Change";
       case "ON_ORDER_STATUS_CHANGE":
         return "On Order Status Change";
-      case "ON_NEW_DATA_ENTRY":
-        return "On New Data Entry";
-      case "ON_SCHEDULED_BASIS":
-        return "On a Scheduled Basis";
+      case "ON_NEW_INVENTORY_ITEM":
+        return "On New Inventory Item";
+      case "ON_NEW_CUSTOMER_OR_VENDOR":
+        return "On New Customer/Vendor";
+      case "ON_REPLENISHMENT_TASK_STATUS_CHANGE":
+        return "On Replenishment Task Status Change";
+      case "ON_DISCREPANCY_REPORTED":
+        return "On Discrepancy Reported";
       default:
         return rule.triggerType;
     }
@@ -78,18 +82,47 @@ const Automation: React.FC = () => {
 
   const getConditionSummary = (rule: AutomationRule) => {
     if (!rule.conditionJson) return "No specific conditions";
-    // For this phase, we only support simple quantity condition
-    if (rule.triggerType === "ON_STOCK_LEVEL_CHANGE" && rule.conditionJson.field === "quantity" && rule.conditionJson.operator === "lt") {
-      return `Quantity drops below ${rule.conditionJson.value}`;
+
+    switch (rule.triggerType) {
+      case "ON_STOCK_LEVEL_CHANGE":
+        if (rule.conditionJson.field === "quantity" && rule.conditionJson.operator === "lt") {
+          return `Quantity drops below ${rule.conditionJson.value}`;
+        } else if (rule.conditionJson.field === "status" && rule.conditionJson.operator === "eq") {
+          return `Status is '${rule.conditionJson.value}'`;
+        } else if (rule.conditionJson.field === "category" && rule.conditionJson.operator === "eq") {
+          return `Category is '${rule.conditionJson.value}'`;
+        } else if (rule.conditionJson.field === "location" && rule.conditionJson.operator === "eq") {
+          return `Location is '${rule.conditionJson.value}'`;
+        }
+        break;
+      case "ON_ORDER_STATUS_CHANGE":
+        const oldStatus = rule.conditionJson.oldStatus === "any" ? "any status" : `'${rule.conditionJson.oldStatus}'`;
+        return `Order Type '${rule.conditionJson.orderType}' changes from ${oldStatus} to '${rule.conditionJson.newStatus}'`;
+      case "ON_NEW_INVENTORY_ITEM":
+        if (rule.conditionJson.field === "category" && rule.conditionJson.operator === "eq") {
+          return `Category is '${rule.conditionJson.value}'`;
+        } else if (rule.conditionJson.field === "unitCost" && rule.conditionJson.operator === "gt") {
+          return `Unit Cost > ${rule.conditionJson.value}`;
+        } else if (rule.conditionJson.field === "unitCost" && rule.conditionJson.operator === "lt") {
+          return `Unit Cost < ${rule.conditionJson.value}`;
+        }
+        break;
+      // Add other trigger condition summaries here
     }
     return JSON.stringify(rule.conditionJson);
   };
 
   const getActionSummary = (rule: AutomationRule) => {
     if (!rule.actionJson) return "No specific action";
-    // For this phase, we only support send notification action
-    if (rule.actionJson.type === "SEND_NOTIFICATION") {
-      return `Send Notification: "${rule.actionJson.message}"`;
+
+    switch (rule.actionJson.type) {
+      case "SEND_NOTIFICATION":
+        return `Send Notification: "${rule.actionJson.message}"`;
+      case "SEND_EMAIL":
+        return `Send Email to ${rule.actionJson.to} with subject "${rule.actionJson.subject}"`;
+      case "CREATE_PURCHASE_ORDER":
+        return `Create PO for item ${rule.actionJson.itemId} (Qty: ${rule.actionJson.quantity})`;
+      // Add other action summaries here
     }
     return JSON.stringify(rule.actionJson);
   };
