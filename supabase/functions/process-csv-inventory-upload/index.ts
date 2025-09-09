@@ -305,9 +305,18 @@ Deno.serve(async (req) => {
       status: errors.length > 0 ? 400 : 200,
     });
 
-  } catch (error) {
+  } catch (error: any) { // Explicitly type as 'any' to allow flexible access
     console.error('Edge Function error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    let errorMessage = 'An unknown error occurred.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      // This handles PostgrestError which has a 'message' property
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     });
