@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.window"],
+    "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": true,
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "types": ["@deno/types"]
+  },
+  "imports": {
+    "https://esm.sh/@supabase/supabase-js@2.55.0": "https://esm.sh/@supabase/supabase-js@2.55.0",
+    "https://esm.sh/xlsx@0.18.5": "https://esm.sh/xlsx@0.18.5"
+  }
+}

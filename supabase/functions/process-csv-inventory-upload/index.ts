@@ -3,7 +3,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5'; // Import XLSX for CSV parsing
-import { corsHeaders } from '../_shared/cors.ts';
+// Inlined corsHeaders to avoid module resolution issues
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 // Define an interface for existing inventory items to provide type safety
 interface ExistingInventoryItem {
