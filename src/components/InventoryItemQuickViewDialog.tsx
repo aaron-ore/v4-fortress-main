@@ -158,22 +158,27 @@ const InventoryItemQuickViewDialog: React.FC<InventoryItemQuickViewDialogProps> 
       lastUpdated: new Date().toISOString().split('T')[0],
     };
 
-    await updateInventoryItem(updatedItem);
+    try {
+      await updateInventoryItem(updatedItem);
 
-    // Log stock movement
-    await addStockMovement({
-      itemId: currentItem.id,
-      itemName: currentItem.name,
-      type: adjustmentType,
-      amount: amount,
-      oldQuantity: oldQuantity, // Log total old quantity
-      newQuantity: newPickingBinQuantity + newOverstockQuantity, // Log total new quantity
-      reason: `${adjustmentReason} (${adjustmentTarget === "pickingBin" ? "Picking Bin" : "Overstock"})`,
-    });
+      // Log stock movement
+      await addStockMovement({
+        itemId: currentItem.id,
+        itemName: currentItem.name,
+        type: adjustmentType,
+        amount: amount,
+        oldQuantity: oldQuantity, // Log total old quantity
+        newQuantity: newPickingBinQuantity + newOverstockQuantity, // Log total new quantity
+        reason: `${adjustmentReason} (${adjustmentTarget === "pickingBin" ? "Picking Bin" : "Overstock"})`,
+      });
 
-    await refreshInventory();
-    showSuccess(`Stock for ${currentItem.name} adjusted by ${adjustmentType === 'add' ? '+' : '-'}${amount} in ${adjustmentTarget === "pickingBin" ? "Picking Bin" : "Overstock"} due to: ${adjustmentReason}. New total quantity: ${newPickingBinQuantity + newOverstockQuantity}.`);
-    onClose();
+      await refreshInventory();
+      showSuccess(`Stock for ${currentItem.name} adjusted by ${adjustmentType === 'add' ? '+' : '-'}${amount} in ${adjustmentTarget === "pickingBin" ? "Picking Bin" : "Overstock"} due to: ${adjustmentReason}. New total quantity: ${newPickingBinQuantity + newOverstockQuantity}.`);
+      onClose();
+    } catch (error: any) {
+      console.error("Error adjusting stock:", error);
+      showError(error.message || String(error)); // Ensure string message
+    }
   };
 
   const handleToggleAutoReorder = async (checked: boolean) => {
@@ -193,8 +198,14 @@ const InventoryItemQuickViewDialog: React.FC<InventoryItemQuickViewDialogProps> 
       autoReorderQuantity: parsedAutoReorderQuantity,
       lastUpdated: new Date().toISOString().split('T')[0],
     };
-    await updateInventoryItem(updatedItem);
-    showSuccess(`Auto-reorder for ${currentItem.name} ${checked ? "enabled" : "disabled"}.`);
+    try {
+      await updateInventoryItem(updatedItem);
+      showSuccess(`Auto-reorder for ${currentItem.name} ${checked ? "enabled" : "disabled"}.`);
+    } catch (error: any) {
+      console.error("Error toggling auto-reorder:", error);
+      showError(error.message || String(error)); // Ensure string message
+      setAutoReorderEnabled(!checked); // Revert UI toggle on error
+    }
   };
 
   const handleAutoReorderQuantityChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,8 +219,15 @@ const InventoryItemQuickViewDialog: React.FC<InventoryItemQuickViewDialogProps> 
         autoReorderQuantity: newQty,
         lastUpdated: new Date().toISOString().split('T')[0],
       };
-      await updateInventoryItem(updatedItem);
-      showSuccess(`Auto-reorder quantity for ${currentItem.name} updated to ${newQty}.`);
+      try {
+        await updateInventoryItem(updatedItem);
+        showSuccess(`Auto-reorder quantity for ${currentItem.name} updated to ${newQty}.`);
+      } catch (error: any) {
+        console.error("Error updating auto-reorder quantity:", error);
+        showError(error.message || String(error)); // Ensure string message
+        // Optionally, revert autoReorderQuantity state if update fails
+        setAutoReorderQuantity(currentItem.autoReorderQuantity?.toString() || "");
+      }
     }
   };
 
@@ -261,7 +279,8 @@ const InventoryItemQuickViewDialog: React.FC<InventoryItemQuickViewDialogProps> 
       console.log(`Simulating email to ${vendor.email} for PO ${newPoNumber} with items:`, poItems);
       onClose();
     } catch (error: any) {
-      showError(`Failed to place manual reorder: ${error.message}`);
+      console.error("Error placing manual reorder:", error);
+      showError(error.message || String(error)); // Ensure string message
     }
   };
 
@@ -271,10 +290,15 @@ const InventoryItemQuickViewDialog: React.FC<InventoryItemQuickViewDialogProps> 
 
   const confirmDeleteItem = async () => {
     if (!currentItem) return;
-    await deleteInventoryItem(currentItem.id);
-    showSuccess(`${currentItem.name} has been deleted.`);
-    setIsConfirmDeleteDialogOpen(false);
-    onClose();
+    try {
+      await deleteInventoryItem(currentItem.id);
+      showSuccess(`${currentItem.name} has been deleted.`);
+      setIsConfirmDeleteDialogOpen(false);
+      onClose();
+    } catch (error: any) {
+      console.error("Error deleting item:", error);
+      showError(error.message || String(error)); // Ensure string message
+    }
   };
 
   const handleViewFullDetails = () => {

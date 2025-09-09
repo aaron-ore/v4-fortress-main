@@ -256,7 +256,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
 
     if (error) {
       console.error("Error adding inventory item:", error);
-      throw error;
+      throw new Error(error.message || 'Failed to add item: Unknown error.'); // Ensure string message
     } else if (data && data.length > 0) {
       showSuccess(`Added new inventory item: ${data[0].name} (SKU: ${data[0].sku}).`);
     } else {
@@ -307,7 +307,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
 
     if (error) {
       console.error("Error updating inventory item:", error);
-      throw error;
+      throw new Error(error.message || 'Failed to update item: Unknown error.'); // Ensure string message
     } else if (data && data.length > 0) {
       showSuccess(`Updated inventory item: ${data[0].name} (SKU: ${data[0].sku}).`);
     } else {
@@ -334,7 +334,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({
 
     if (error) {
       console.error("Error deleting inventory item:", error);
-      showError(`Failed to delete item: ${error.message}`);
+      throw new Error(error.message || 'Failed to delete item: Unknown error.'); // Ensure string message
     } else {
       showSuccess("Item deleted successfully!");
     }
