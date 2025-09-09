@@ -278,7 +278,7 @@ const CreatePurchaseOrder: React.FC = () => {
     const pdfProps = {
       poNumber,
       poDate,
-      supplierName: supplier,
+      supplierName: supplierName, // Fixed: Changed 'supplier' to 'supplierName'
       supplierEmail: supplierEmail,
       supplierAddress: supplierAddress,
       supplierContact: supplierContact,

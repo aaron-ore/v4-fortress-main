@@ -35,7 +35,7 @@ const ReceiveInventoryTool: React.FC<ReceiveInventoryToolProps> = ({ onScanReque
   const { orders, fetchOrders, updateOrder } = useOrders();
   const { inventoryItems, refreshInventory, updateInventoryItem } = useInventory();
   const { addStockMovement } = useStockMovement();
-  const { locations } = useOnboarding(); // Now contains Location[]
+  const { locations: structuredLocations } = useOnboarding(); // Fixed: Import structuredLocations
   const { initiatePrint } = usePrint();
 
   const [poNumberInput, setPoNumberInput] = useState("");
@@ -43,7 +43,7 @@ const ReceiveInventoryTool: React.FC<ReceiveInventoryToolProps> = ({ onScanReque
   const [receivedItems, setReceivedItems] = useState<ReceivedItemDisplay[]>([]);
   const [isScanning, setIsScanning] = useState(false);
 
-  const availableLocations = useMemo(() => locations.filter(loc => loc.fullLocationString !== "RETURNS-AREA-01-1-A"), [locations]);
+  const availableLocations = useMemo(() => structuredLocations.filter(loc => loc.fullLocationString !== "RETURNS-AREA-01-1-A"), [structuredLocations]);
 
   useEffect(() => {
     setSelectedPO(null);
@@ -108,7 +108,7 @@ const ReceiveInventoryTool: React.FC<ReceiveInventoryToolProps> = ({ onScanReque
       setReceivedItems(itemsWithDetails);
       showSuccess(`Purchase Order ${foundPO.id} loaded.`);
     } else {
-      showError(`Purchase Order "${currentPoNum}" not found or is not a Purchase Order.`);
+      showError(`Purchase Order "${currentPoNum}" not found or not a Purchase Order.`);
       setSelectedPO(null);
       setReceivedItems([]);
     }
@@ -197,6 +197,7 @@ const ReceiveInventoryTool: React.FC<ReceiveInventoryToolProps> = ({ onScanReque
         serialNumber: item.serialNumber,
         qrCodeSvg: qrCodeSvg,
         printDate: format(new Date(), "MMM dd, yyyy HH:mm"),
+        structuredLocations: structuredLocations, // Pass structuredLocations to PDF
       };
 
       initiatePrint({ type: "putaway-label", props: labelProps });
@@ -252,9 +253,9 @@ const ReceiveInventoryTool: React.FC<ReceiveInventoryToolProps> = ({ onScanReque
       const updatedPO = {
         ...selectedPO,
         status: "Shipped" as OrderItem['status'],
-        putawayStatus: "Pending", // NEW: Mark PO as pending putaway
+        putawayStatus: "Pending" as OrderItem['putawayStatus'], // Fixed: Explicitly cast putawayStatus
         notes: selectedPO.notes
-      }; // Explicitly cast status
+      };
       await updateOrder(updatedPO);
       showSuccess(`Shipment for PO ${selectedPO.id} received successfully! Inventory updated and ready for putaway.`);
       refreshInventory(); // Ensure inventory context is refreshed
