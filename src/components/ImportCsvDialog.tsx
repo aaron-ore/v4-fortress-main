@@ -23,6 +23,9 @@ import { generateInventoryCsvTemplate } from "@/utils/csvGenerator";
 import DuplicateItemsWarningDialog from "@/components/DuplicateItemsWarningDialog";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { parseLocationString } from "@/utils/locationParser";
+import { supabase } from "@/lib/supabaseClient"; // Import supabase client
+import { uploadFileToSupabase } from "@/integrations/supabase/storage"; // Import storage utility
+import { useProfile } from "@/context/ProfileContext"; // Import useProfile
 
 interface CsvDuplicateItem {
   sku: string;
@@ -39,10 +42,11 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { addInventoryItem, updateInventoryItem, inventoryItems } = useInventory();
+  const { addInventoryItem, updateInventoryItem, inventoryItems, refreshInventory } = useInventory();
   const { categories, addCategory } = useCategories();
   const { locations, addLocation } = useOnboarding();
   const { addStockMovement } = useStockMovement();
+  const { profile } = useProfile(); // Get profile for organizationId and userId
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -55,7 +59,7 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
   // States for Duplicate SKUs Warning
   const [duplicateSkusInCsv, setDuplicateSkusInCsv] = useState<CsvDuplicateItem[]>([]);
   const [isDuplicateItemsWarningDialogOpen, setIsDuplicateItemsWarningDialogOpen] = useState(false);
-  const [duplicateAction, setDuplicateAction] = useState<"skip" | "add_to_stock">("skip"); // Default action for duplicates
+  const [duplicateAction, setDuplicateAction] = useState<"skip" | "add_to_stock" | "update">("skip"); // Default action for duplicates
 
   // Memoize existing SKUs for efficient lookup
   const existingInventorySkus = useMemo(() => {
@@ -90,7 +94,7 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
   };
 
   // Helper function to check for new locations and then proceed with CSV processing
-  const checkForNewLocationsAndProceed = async (data: any[], actionForDuplicates: "skip" | "add_to_stock") => {
+  const checkForNewLocationsAndProceed = async (data: any[], actionForDuplicates: "skip" | "add_to_stock" | "update") => {
     const uniqueLocationsInCsv = Array.from(new Set(data.map(row => String(row.location || '').trim())));
     const uniquePickingBinLocationsInCsv = Array.from(new Set(data.map(row => String(row.pickingBinLocation || '').trim())));
     const allUniqueLocationsInCsv = Array.from(new Set([...uniqueLocationsInCsv, ...uniquePickingBinLocationsInCsv]));
@@ -104,263 +108,74 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
       setIsConfirmNewLocationsDialogOpen(true);
       setIsUploading(false); // Stop loading until user confirms new locations
     } else {
-      // If no new locations, proceed directly to processing
-      await processCsvData(data, [], actionForDuplicates);
+      // If no new locations, proceed directly to invoking Edge Function
+      await invokeEdgeFunction(data, actionForDuplicates);
       setSelectedFile(null);
     }
   };
 
-  // Main processing function, now accepts duplicateAction
-  const processCsvData = async (data: any[], confirmedNewLocationStrings: string[], actionForDuplicates: "skip" | "add_to_stock") => {
+  const invokeEdgeFunction = async (data: any[], actionForDuplicates: "skip" | "add_to_stock" | "update") => {
+    if (!profile?.organizationId || !profile?.id) {
+      showError("User or organization not loaded. Cannot perform import.");
+      setIsUploading(false);
+      return;
+    }
+
     setIsUploading(true);
-    let successCount = 0;
-    let errorCount = 0;
-    const errors: string[] = [];
+    let uploadedFilePath: string | null = null;
 
-    const currentCategoriesMap = new Map(categories.map(cat => [cat.name.toLowerCase(), cat.id]));
-    // Combine existing structured locations with newly confirmed ones
-    const currentLocationsSet = new Set([
-      ...locations.map(loc => loc.fullLocationString.toLowerCase()),
-      ...confirmedNewLocationStrings.map(locString => locString.toLowerCase())
-    ]);
-    
-    // Ensure all categories from CSV exist
-    const uniqueCategoriesInCsv = Array.from(new Set(data.map(row => String(row.category || '').trim())));
-    
-    for (const csvCategory of uniqueCategoriesInCsv) {
-      if (csvCategory && !currentCategoriesMap.has(csvCategory.toLowerCase())) {
-        const addedCat = await addCategory(csvCategory);
-        if (addedCat) {
-          currentCategoriesMap.set(addedCat.name.toLowerCase(), addedCat.id);
-        } else {
-          errors.push(`Failed to ensure category '${csvCategory}' exists.`);
-          errorCount++;
-        }
+    try {
+      // 1. Upload the CSV file to Supabase Storage
+      if (!selectedFile) {
+        throw new Error("No file selected for upload.");
       }
+      uploadedFilePath = await uploadFileToSupabase(selectedFile, 'csv-uploads', 'inventory-imports/');
+      showSuccess("CSV file uploaded to storage. Processing...");
+
+      // 2. Invoke the Edge Function
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        throw new Error("User session not found. Please log in again.");
+      }
+
+      const edgeFunctionUrl = `https://nojumocxivfjsbqnnkqe.supabase.co/functions/v1/process-csv-inventory-upload`;
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          filePath: uploadedFilePath,
+          organizationId: profile.organizationId,
+          userId: profile.id,
+          actionForDuplicates: actionForDuplicates,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Edge Function failed with status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        showSuccess(result.message);
+      } else {
+        showError(result.message || "Bulk import completed with errors. Check console for details.");
+        console.error("Bulk Import Errors:", result.errors);
+      }
+      refreshInventory(); // Refresh inventory after bulk import
+      onClose();
+
+    } catch (error: any) {
+      console.error("Error during bulk import process:", error);
+      showError(`Bulk import failed: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+      setSelectedFile(null);
+      // The Edge Function is responsible for deleting the file from storage
     }
-
-    // Add any newly confirmed locations to the context
-    for (const locString of confirmedNewLocationStrings) {
-      const parsed = parseLocationString(locString);
-      const newLocation: Omit<Location, "id" | "createdAt" | "userId" | "organizationId"> = {
-        fullLocationString: locString,
-        displayName: locString, // Use full string as display name for auto-added
-        area: parsed.area || "N/A",
-        row: parsed.row || "N/A",
-        bay: parsed.bay || "N/A",
-        level: parsed.level || "N/A",
-        pos: parsed.pos || "N/A",
-        color: "#CCCCCC", // Default color for auto-added locations
-      };
-      // Use the updated addLocation that handles duplicates
-      await addLocation(newLocation);
-    }
-    
-    // Process inventory items
-    for (const row of data) {
-      const itemName = String(row.name || '').trim();
-      const sku = String(row.sku || '').trim();
-      const description = String(row.description || '').trim();
-      const imageUrl = String(row.imageUrl || '').trim() || undefined;
-      const vendorId = String(row.vendorId || '').trim() || undefined;
-      const barcodeUrl = String(row.barcodeUrl || '').trim() || sku; // Default to SKU if empty
-      const autoReorderEnabled = String(row.autoReorderEnabled || 'false').toLowerCase() === 'true';
-
-      // --- Strict validation for required fields (itemName, sku) ---
-      if (!itemName) {
-        errors.push(`Row with SKU '${sku || 'N/A'}': Item Name is required.`);
-        errorCount++;
-        continue;
-      }
-      if (!sku) {
-        errors.push(`Row with Item Name '${itemName || 'N/A'}': SKU is required.`);
-        errorCount++;
-        continue;
-      }
-
-      // --- Numeric fields with defaults and warnings ---
-      let pickingBinQuantity = parseInt(String(row.pickingBinQuantity || '0'));
-      if (isNaN(pickingBinQuantity) || pickingBinQuantity < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Picking Bin Quantity. Defaulting to 0.`);
-        pickingBinQuantity = 0;
-      }
-
-      let overstockQuantity = parseInt(String(row.overstockQuantity || '0'));
-      if (isNaN(overstockQuantity) || overstockQuantity < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Overstock Quantity. Defaulting to 0.`);
-        overstockQuantity = 0;
-      }
-
-      let reorderLevel = parseInt(String(row.reorderLevel || '0'));
-      if (isNaN(reorderLevel) || reorderLevel < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Reorder Level. Defaulting to 0.`);
-        reorderLevel = 0;
-      }
-
-      let pickingReorderLevel = parseInt(String(row.pickingReorderLevel || '0'));
-      if (isNaN(pickingReorderLevel) || pickingReorderLevel < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Picking Reorder Level. Defaulting to 0.`);
-        pickingReorderLevel = 0;
-      }
-
-      let committedStock = parseInt(String(row.committedStock || '0'));
-      if (isNaN(committedStock) || committedStock < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Committed Stock. Defaulting to 0.`);
-        committedStock = 0;
-      }
-
-      let incomingStock = parseInt(String(row.incomingStock || '0'));
-      if (isNaN(incomingStock) || incomingStock < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Incoming Stock. Defaulting to 0.`);
-        incomingStock = 0;
-      }
-
-      let unitCost = parseFloat(String(row.unitCost || '0'));
-      if (isNaN(unitCost) || unitCost < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Unit Cost. Defaulting to 0.`);
-        unitCost = 0;
-      }
-
-      let retailPrice = parseFloat(String(row.retailPrice || '0'));
-      if (isNaN(retailPrice) || retailPrice < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Retail Price. Defaulting to 0.`);
-        retailPrice = 0;
-      }
-
-      let autoReorderQuantity = parseInt(String(row.autoReorderQuantity || '0'));
-      if (isNaN(autoReorderQuantity) || autoReorderQuantity < 0) {
-        errors.push(`SKU '${sku}': Invalid or negative Auto-Reorder Quantity. Defaulting to 0.`);
-        autoReorderQuantity = 0;
-      }
-
-      // --- Category and Location handling (optional in CSV, but must exist or default) ---
-      let finalCategory = String(row.category || '').trim();
-      if (!finalCategory) {
-        finalCategory = 'Uncategorized';
-        errors.push(`SKU '${sku}': Category is empty. Defaulting to 'Uncategorized'.`);
-      } else if (!currentCategoriesMap.has(finalCategory.toLowerCase())) {
-        errors.push(`SKU '${sku}': Category '${finalCategory}' could not be found or created. Item skipped.`);
-        errorCount++;
-        continue;
-      }
-
-      let finalLocation = String(row.location || '').trim();
-      if (!finalLocation) {
-        finalLocation = 'Unassigned';
-        errors.push(`SKU '${sku}': Main Storage Location is empty. Defaulting to 'Unassigned'.`);
-      } else if (!currentLocationsSet.has(finalLocation.toLowerCase())) {
-        errors.push(`SKU '${sku}': Main Storage Location '${finalLocation}' does not exist and was not confirmed to be added. Item skipped.`);
-        errorCount++;
-        continue;
-      }
-
-      let finalPickingBinLocation = String(row.pickingBinLocation || '').trim();
-      if (!finalPickingBinLocation) {
-        finalPickingBinLocation = 'Unassigned';
-        errors.push(`SKU '${sku}': Picking Bin Location is empty. Defaulting to 'Unassigned'.`);
-      } else if (!currentLocationsSet.has(finalPickingBinLocation.toLowerCase())) {
-        errors.push(`SKU '${sku}': Picking Bin Location '${finalPickingBinLocation}' does not exist and was not confirmed to be added. Item skipped.`);
-        errorCount++;
-        continue;
-      }
-
-      const isDuplicate = existingInventorySkus.has(sku.toLowerCase());
-
-      if (isDuplicate) {
-        if (actionForDuplicates === "skip") {
-          errors.push(`SKU '${sku}': Skipped due to duplicate entry confirmation.`);
-          errorCount++;
-          continue;
-        } else if (actionForDuplicates === "add_to_stock") {
-          const existingItem = inventoryItems.find(item => item.sku.toLowerCase() === sku.toLowerCase());
-          if (existingItem) {
-            const oldQuantity = existingItem.quantity;
-            const quantityToAdd = pickingBinQuantity + overstockQuantity; // Total quantity from CSV row
-            const newQuantity = oldQuantity + quantityToAdd;
-
-            const updatedItem = {
-              ...existingItem,
-              pickingBinQuantity: existingItem.pickingBinQuantity + pickingBinQuantity, // Add to picking bin
-              overstockQuantity: existingItem.overstockQuantity + overstockQuantity, // Add to overstock
-              lastUpdated: new Date().toISOString().split('T')[0],
-              // Other fields from CSV are ignored for 'add_to_stock' to keep it simple
-            };
-
-            try {
-              await updateInventoryItem(updatedItem);
-              await addStockMovement({
-                itemId: existingItem.id,
-                itemName: existingItem.name,
-                type: "add",
-                amount: quantityToAdd,
-                oldQuantity: oldQuantity,
-                newQuantity: newQuantity,
-                reason: "CSV Bulk Import - Added to stock",
-              });
-              successCount++;
-            } catch (updateError: any) {
-              errors.push(`Failed to update item '${existingItem.name}' (SKU: ${sku}): ${updateError.message || 'Unknown error'}.`);
-              errorCount++;
-            }
-            continue; // Move to next row after processing duplicate
-          } else {
-            errors.push(`SKU '${sku}': Item not found for stock addition, despite being marked as duplicate.`);
-            errorCount++;
-            continue;
-          }
-        }
-      }
-
-      // If not a duplicate, or duplicate but not handled by specific action, add as new item
-      try {
-        const newItemData = {
-          name: itemName,
-          description: description,
-          sku: sku,
-          category: finalCategory,
-          pickingBinQuantity: pickingBinQuantity,
-          overstockQuantity: overstockQuantity,
-          reorderLevel: reorderLevel,
-          pickingReorderLevel: pickingReorderLevel,
-          committedStock: committedStock,
-          incomingStock: incomingStock,
-          unitCost: unitCost,
-          retailPrice: retailPrice,
-          location: finalLocation,
-          pickingBinLocation: finalPickingBinLocation,
-          imageUrl: imageUrl,
-          vendorId: vendorId,
-          barcodeUrl: barcodeUrl,
-          autoReorderEnabled: autoReorderEnabled,
-          autoReorderQuantity: autoReorderQuantity,
-        };
-        await addInventoryItem(newItemData);
-        successCount++;
-      } catch (addError: any) {
-        if (addError.code === '23505' && addError.message?.includes('inventory_items_sku_key')) {
-          errors.push(`Failed to add item '${itemName}' (SKU: ${sku}): Duplicate SKU detected. An item with this SKU already exists.`);
-        } else {
-          errors.push(`Failed to add item '${itemName}' (SKU: ${sku}): ${addError.message || 'Unknown error'}.`);
-        }
-        errorCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      showSuccess(`Successfully imported ${successCount} item(s).`);
-    }
-    if (errorCount > 0) {
-      const errorMessage = errorCount === 1
-        ? errors[0]
-        : `Failed to import ${errorCount} item(s) due to various issues (e.g., duplicate SKUs, invalid data).`;
-      showError(errorMessage);
-      console.error("CSV Import Summary - Errors:", errors);
-    }
-    if (successCount === 0 && errorCount === 0) {
-      showError("No valid data found in the CSV to import.");
-    }
-    setIsUploading(false);
-    onClose();
   };
 
   const handleUpload = async () => {
@@ -478,6 +293,17 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
     }
   };
 
+  const handleUpdateExisting = async () => {
+    setIsDuplicateItemsWarningDialogOpen(false);
+    if (jsonDataToProcess) {
+      await checkForNewLocationsAndProceed(jsonDataToProcess, "update");
+    } else {
+      setIsUploading(false);
+      setSelectedFile(null);
+      onClose();
+    }
+  };
+
   const handleCancelDuplicateWarning = () => {
     setIsDuplicateItemsWarningDialogOpen(false);
     setIsUploading(false);
@@ -513,7 +339,7 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
     showSuccess(`Added new locations: ${newLocationsToConfirm.join(", ")}`);
 
     if (jsonDataToProcess) {
-      await processCsvData(jsonDataToProcess, newLocationsToConfirm, duplicateAction);
+      await invokeEdgeFunction(jsonDataToProcess, duplicateAction);
     }
     setNewLocationsToConfirm([]);
     setSelectedFile(null);
@@ -579,6 +405,7 @@ const ImportCsvDialog: React.FC<ImportCsvDialogProps> = ({
         duplicates={duplicateSkusInCsv}
         onSkipAll={handleSkipAllDuplicates}
         onAddToExistingStock={handleAddToExistingStock}
+        onUpdateExisting={handleUpdateExisting} // NEW: Pass new handler
       />
 
       {/* New Locations Confirmation Dialog */}

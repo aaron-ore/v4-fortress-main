@@ -23,6 +23,7 @@ interface DuplicateItemsWarningDialogProps {
   duplicates: CsvDuplicateItem[];
   onSkipAll: () => void;
   onAddToExistingStock: () => void;
+  onUpdateExisting: () => void; // NEW: Add onUpdateExisting prop
 }
 
 const MAX_ITEMS_PER_PAGE = 5; // Max items to show per page
@@ -33,6 +34,7 @@ const DuplicateItemsWarningDialog: React.FC<DuplicateItemsWarningDialogProps> = 
   duplicates,
   onSkipAll,
   onAddToExistingStock,
+  onUpdateExisting, // NEW: Destructure onUpdateExisting
 }) => {
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -70,7 +72,7 @@ const DuplicateItemsWarningDialog: React.FC<DuplicateItemsWarningDialogProps> = 
         </DialogHeader>
         <div className="flex-grow flex flex-col gap-4 py-4 overflow-hidden">
           <p className="text-sm text-muted-foreground">
-            For these SKUs, you can either skip them or add the quantities from the CSV to their current stock levels.
+            For these SKUs, you can either skip them, add the quantities from the CSV to their current stock levels, or update their existing details with the data from the CSV.
           </p>
           
           {duplicates.length > 0 ? (
@@ -107,8 +109,11 @@ const DuplicateItemsWarningDialog: React.FC<DuplicateItemsWarningDialogProps> = 
           <Button variant="secondary" onClick={onSkipAll}>
             Skip All Duplicates
           </Button>
-          <Button onClick={onAddToExistingStock}>
+          <Button variant="secondary" onClick={onAddToExistingStock}> {/* Changed to secondary */}
             Add Quantities to Existing Stock
+          </Button>
+          <Button onClick={onUpdateExisting}> {/* NEW: Add Update Existing button */}
+            Update Existing Items
           </Button>
         </DialogFooter>
       </DialogContent>
