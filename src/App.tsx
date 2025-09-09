@@ -19,12 +19,6 @@ const App = () => {
         position="top-right"
         duration={3000}
         closeButton
-        toastOptions={{
-          style: {
-            minWidth: '250px',
-            maxWidth: '350px',
-          },
-        }}
       />
       <BrowserRouter>
         <ProfileProvider>

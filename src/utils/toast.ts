@@ -1,40 +1,69 @@
 import { toast } from "sonner";
 
 let consecutiveErrorCount = 0;
-const ERROR_THRESHOLD = 3; // Number of consecutive errors before suggesting support
+const ERROR_THRESHOLD = 3; // Number of consecutive errors before showing a summary
+let summaryErrorToastId: string | number | null = null; // ID of the persistent summary error toast
+const activeToastIds: Set<string | number> = new Set(); // Track all active toast IDs
 
 const showToast = (type: 'success' | 'error', message: string, options?: any) => {
-  if (type === 'error') {
-    consecutiveErrorCount++;
-    if (consecutiveErrorCount >= ERROR_THRESHOLD) {
-      message = "Multiple errors detected. Please contact support if the issue persists.";
-    }
-  } else {
-    consecutiveErrorCount = 0; // Reset on success
-  }
-
-  toast[type](message, {
+  const id = toast[type](message, {
     ...options,
-    onDismiss: (id: string | number) => {
-      // If the user dismisses a "contact support" toast, reset the counter
-      if (consecutiveErrorCount >= ERROR_THRESHOLD && type === 'error') {
-        consecutiveErrorCount = 0;
+    onDismiss: (dismissedId: string | number) => {
+      activeToastIds.delete(dismissedId);
+      if (dismissedId === summaryErrorToastId) {
+        summaryErrorToastId = null;
+        consecutiveErrorCount = 0; // Reset error count when summary is dismissed
       }
-      options?.onDismiss?.(id);
+      options?.onDismiss?.(dismissedId);
+    },
+    onAutoClose: (closedId: string | number) => {
+      activeToastIds.delete(closedId);
+      if (closedId === summaryErrorToastId) {
+        summaryErrorToastId = null;
+        consecutiveErrorCount = 0; // Reset error count when summary auto-closes
+      }
+      options?.onAutoClose?.(closedId);
     }
   });
+  activeToastIds.add(id);
+  return id;
 };
 
 export const showSuccess = (message: string) => {
+  // If a summary error toast is active, dismiss it when a success occurs
+  if (summaryErrorToastId !== null) {
+    toast.dismiss(summaryErrorToastId);
+    summaryErrorToastId = null;
+    consecutiveErrorCount = 0; // Reset error count on success
+  }
+  consecutiveErrorCount = 0; // Reset error count on success
   showToast('success', message);
 };
 
 export const showError = (message: string) => {
-  // Intercept generic "Fetch failed" messages
-  if (message.toLowerCase().includes("fetch failed")) {
-    message = "A network error occurred. Please check your internet connection and try again.";
+  // If a summary error toast is already active, don't show new individual errors
+  if (summaryErrorToastId !== null) {
+    console.warn("Additional error occurred while summary toast is active. Message:", message);
+    return; // Suppress individual error toasts
   }
-  showToast('error', message);
+
+  consecutiveErrorCount++;
+
+  if (consecutiveErrorCount >= ERROR_THRESHOLD) {
+    // Dismiss all currently active toasts before showing the summary
+    activeToastIds.forEach(id => toast.dismiss(id));
+    activeToastIds.clear();
+
+    const summaryMessage = "Multiple errors detected. Please contact support if the issue persists.";
+    summaryErrorToastId = showToast('error', summaryMessage, {
+      duration: Infinity, // Make summary error toast persistent until dismissed manually
+      closeButton: true,
+    });
+    consecutiveErrorCount = 0; // Reset count after showing summary
+  } else {
+    // Show individual error toast
+    showToast('error', message);
+  }
 };
 
 export const dismissToast = (toastId: string | number) => {
