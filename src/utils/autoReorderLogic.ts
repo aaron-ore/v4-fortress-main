@@ -4,6 +4,7 @@ import { Vendor } from "@/context/VendorContext";
 import { showSuccess, showError } from "@/utils/toast";
 import { generateSequentialNumber } from "@/utils/numberGenerator";
 import { AppNotification } from "@/context/NotificationContext"; // Import AppNotification type
+import { supabase } from "@/lib/supabaseClient"; // NEW: Import supabase
 
 // Simple debounce to prevent multiple orders for the same item in a short period
 const lastReorderAttempt: { [itemId: string]: number } = {};
@@ -84,8 +85,54 @@ export const processAutoReorder = async (
       lastReorderAttempt[item.id] = now; // Mark as attempted
       addNotification(`Auto-reorder placed for ${item.name} (PO: ${newPoNumber}).`, "success"); // Use passed addNotification
       showSuccess(`Auto-reorder placed for ${item.name} (PO: ${newPoNumber}). Email simulated to ${vendor.email || 'vendor'}.`);
-      // Simulate email sending
-      console.log(`Simulating email to ${vendor.email} for PO ${newPoNumber} with items:`, poItems);
+      
+      // NEW: Send email via Edge Function
+      if (vendor.email) {
+        const emailSubject = `New Purchase Order: ${newPoNumber} for ${item.name}`;
+        const emailHtmlContent = `
+          <p>Dear ${vendor.contactPerson || vendor.name},</p>
+          <p>This is an automated purchase order from Fortress Inventory for the following item:</p>
+          <ul>
+            <li><strong>Item:</strong> ${item.name} (SKU: ${item.sku})</li>
+            <li><strong>Quantity:</strong> ${item.autoReorderQuantity} units</li>
+            <li><strong>Unit Cost:</strong> $${item.unitCost.toFixed(2)}</li>
+          </ul>
+          <p>Total amount: $${totalAmount.toFixed(2)}</p>
+          <p>Please process this order (PO: ${newPoNumber}) by ${newPurchaseOrder.dueDate}.</p>
+          <p>Thank you,<br>Fortress Inventory</p>
+        `;
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !sessionData.session) {
+          console.error("Failed to get session for sending email:", sessionError);
+          addNotification(`Failed to send reorder email for ${item.name}: User session missing.`, "error");
+        } else {
+          const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-email', {
+            body: JSON.stringify({
+              to: vendor.email,
+              subject: emailSubject,
+              htmlContent: emailHtmlContent,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionData.session.access_token}`,
+            },
+          });
+
+          if (emailError) {
+            console.error('Error invoking send-email Edge Function:', emailError);
+            addNotification(`Failed to send reorder email for ${item.name}: ${emailError.message}`, "error");
+          } else if (emailResponse.error) {
+            console.error('send-email Edge Function returned error:', emailResponse.error);
+            addNotification(`Failed to send reorder email for ${item.name}: ${emailResponse.error}`, "error");
+          } else {
+            console.log('Reorder email sent successfully via Brevo:', emailResponse);
+            addNotification(`Reorder email sent to ${vendor.email} for ${item.name}.`, "info");
+          }
+        }
+      } else {
+        addNotification(`No email address for vendor ${vendor.name}. Reorder email not sent.`, "warning");
+      }
     } catch (error: any) {
       addNotification(`Failed to auto-reorder ${item.name}: ${error.message}`, "error"); // Use passed addNotification
       showError(`Failed to auto-reorder ${item.name}: ${error.message}`);
