@@ -25,25 +25,26 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
   onDeleteItem,
   isSidebarCollapsed,
 }) => {
-  const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null); // State for QR code SVG
-  const { locations: structuredLocations } = useOnboarding(); // NEW: Get structured locations
+  // REMOVED: QR code state and effect are no longer needed for the card display
+  // const [qrCodeSvg, setQrCodeSvg] = useState<string | null>(null); // State for QR code SVG
+  // useEffect(() => {
+  //   const generateAndSetQr = async () => {
+  //     if (item.barcodeUrl) { // item.barcodeUrl now stores the raw data
+  //       try {
+  //         const svg = await generateQrCodeSvg(item.barcodeUrl, 40); // Adjusted size to 40
+  //         setQrCodeSvg(svg);
+  //       } catch (error) {
+  //         console.error("Error generating QR code for card display:", error);
+  //         setQrCodeSvg(null);
+  //       }
+  //     } else {
+  //       setQrCodeSvg(null);
+  //     }
+  //   };
+  //   generateAndSetQr();
+  // }, [item.barcodeUrl]); // Regenerate if barcodeUrl changes
 
-  useEffect(() => {
-    const generateAndSetQr = async () => {
-      if (item.barcodeUrl) { // item.barcodeUrl now stores the raw data
-        try {
-          const svg = await generateQrCodeSvg(item.barcodeUrl, 40); // Adjusted size to 40
-          setQrCodeSvg(svg);
-        } catch (error) {
-          console.error("Error generating QR code for card display:", error);
-          setQrCodeSvg(null);
-        }
-      } else {
-        setQrCodeSvg(null);
-      }
-    };
-    generateAndSetQr();
-  }, [item.barcodeUrl]); // Regenerate if barcodeUrl changes
+  const { locations: structuredLocations } = useOnboarding(); // NEW: Get structured locations
 
   let statusVariant: "success" | "warning" | "destructive" | "info" | "muted" = "info";
   switch (item.status) {
@@ -103,11 +104,12 @@ const InventoryCard: React.FC<InventoryCardProps> = ({
             {item.status}
           </Badge>
         </div>
-        {qrCodeSvg && ( // Display QR code if available
+        {/* REMOVED: QR code display */}
+        {/* {qrCodeSvg && (
           <div className="mt-2 flex justify-center flex-shrink-0 p-2 bg-white rounded-md">
             <div dangerouslySetInnerHTML={{ __html: qrCodeSvg }} className="w-12 h-12 object-contain" />
           </div>
-        )}
+        )} */}
       </CardContent>
 
       {/* Quick Actions Overlay */}
